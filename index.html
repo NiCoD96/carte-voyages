@@ -1,0 +1,2098 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes voyages en Europe</title>
+<!-- Icône d'onglet : carte pliée + repère (recolorée selon la palette au chargement) -->
+<link rel="icon" id="favicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23d2553a'/%3E%3Cpath d='M10 20l14-6v34l-14 6z' fill='%23fdf3e7'/%3E%3Cpath d='M24 14l16 6v34l-16-6z' fill='%23f1d9bf'/%3E%3Cpath d='M40 20l14-6v34l-14 6z' fill='%23fdf3e7'/%3E%3Cpath d='M32 47s-10-9.5-10-17a10 10 0 0 1 20 0c0 7.5-10 17-10 17z' fill='%23d2553a' stroke='%23fff' stroke-width='3'/%3E%3Ccircle cx='32' cy='30' r='3.6' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<!-- Polices des images Instagram (cadres avion / bateau / randonnée) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800&family=DM+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f2ee; --surface: #ffffff; --text: #1d1c1a; --muted: #6f6b64; --line: #e4e0d8;
+    --accent: #d2553a; --ghost: #a39e95; --shadow: 0 6px 24px rgba(30, 25, 20, .14); --ok: #1f7a4d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --surface: #1f1e1c; --text: #eceae5; --muted: #a09b92; --line: #34322e;
+      --accent: #f07a5c; --ghost: #6f6b64; --shadow: 0 6px 24px rgba(0, 0, 0, .5); --ok: #6fd3a0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141413; --surface: #1f1e1c; --text: #eceae5; --muted: #a09b92; --line: #34322e;
+    --accent: #f07a5c; --ghost: #6f6b64; --shadow: 0 6px 24px rgba(0, 0, 0, .5); --ok: #6fd3a0;
+  }
+  /* Palettes (bouton 🎨) : couleurs du site + teinte appliquée au fond de carte gris (--map-filter).
+     « Classique » suit le mode clair / sombre du système ; « Nuit » utilise le fond de carte sombre. */
+  :root[data-palette="vintage"] { --bg: #efe6d2; --surface: #fbf6ea; --text: #3b2f22; --muted: #7d6c57; --line: #e2d5bb; --accent: #a0522d; --ghost: #b3a48c;
+    --map-filter: sepia(.6) saturate(1.15) brightness(.98); }
+  :root[data-palette="ocean"] { --bg: #e9f0f5; --surface: #ffffff; --text: #16283a; --muted: #5d7085; --line: #d6e1ea; --accent: #1f6fb2; --ghost: #9db0c2;
+    --map-filter: sepia(.55) hue-rotate(170deg) saturate(1.7) brightness(1.02); }
+  :root[data-palette="foret"] { --bg: #edf1e8; --surface: #fbfcf8; --text: #1f2b1d; --muted: #62705c; --line: #dbe3d3; --accent: #3f7d4e; --ghost: #a3b09c;
+    --map-filter: sepia(.5) hue-rotate(45deg) saturate(1.35) brightness(1.01); }
+  :root[data-palette="lavande"] { --bg: #f1eef7; --surface: #ffffff; --text: #261f36; --muted: #6c6380; --line: #e2dcee; --accent: #7a5bc7; --ghost: #aea6c0;
+    --map-filter: sepia(.45) hue-rotate(215deg) saturate(1.3) brightness(1.02); }
+  :root[data-palette="nuit"] { --map-filter: none; }
+  .leaflet-tile-pane .leaflet-layer, .leaflet-overlay-pane .leaflet-layer { filter: var(--map-filter, none); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  #map { position: absolute; inset: 0; background: var(--bg); }
+  /* Ouverture : la carte se déplie comme une carte papier (d'abord en largeur, puis en hauteur),
+     les plis s'estompent, puis le panneau glisse et les photos se posent une à une */
+  #map.intro, #folds.intro { animation: unfold 1.7s cubic-bezier(.65, 0, .35, 1) both; transform-origin: 50% 50%; }
+  @keyframes unfold {
+    0%   { clip-path: inset(44% 47% 44% 47% round 3px); transform: perspective(1600px) rotateX(38deg) scale(.55); }
+    45%  { clip-path: inset(44% 0% 44% 0% round 3px);   transform: perspective(1600px) rotateX(24deg) scale(.8); }
+    100% { clip-path: inset(0 0 0 0 round 0);           transform: none; }
+  }
+  #folds { position: absolute; inset: 0; z-index: 450; pointer-events: none; display: none;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 12.5%, rgba(0,0,0,.14) 12.5% 25%),
+      linear-gradient(180deg, rgba(0,0,0,.10) 0 50%, rgba(255,255,255,.12) 50% 100%); }
+  #folds.intro { display: block; animation: unfold 1.7s cubic-bezier(.65, 0, .35, 1) both, fade-folds 1.9s ease-in both; }
+  @keyframes fade-folds { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
+  #panel.intro { animation: panel-in .6s 1.35s cubic-bezier(.2, .8, .3, 1) both; }
+  @keyframes panel-in { from { opacity: 0; translate: -24px 0; } to { opacity: 1; translate: 0 0; } }
+  .intro-pop { animation: pop .45s cubic-bezier(.2, .9, .3, 1.3) both; animation-delay: var(--d, 0s); }
+  @keyframes pop { from { scale: 0; opacity: 0; } to { scale: 1; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    #map.intro, #folds.intro, #panel.intro, .intro-pop { animation: none !important; }
+    #folds.intro { display: none; }
+  }
+  #map.picking { cursor: crosshair; }
+  #map.picking .leaflet-grab { cursor: crosshair; }
+
+  /* Panneau */
+  #panel {
+    position: absolute; z-index: 500; top: 16px; left: 16px; bottom: 16px; width: 360px;
+    background: var(--surface); border-radius: 14px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: transform .35s cubic-bezier(.4, 0, .2, 1), opacity .25s;
+  }
+  .ph-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+  .ph-head h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .title-row { display: flex; align-items: center; gap: 8px; }
+  /* Titre modifiable : petit crayon au survol, champ visible pendant la saisie */
+  #site-title { flex: 1; min-width: 0; border-radius: 6px; padding: 1px 4px; margin-left: -4px; cursor: text; outline: none; }
+  #site-title:hover { background: var(--bg); }
+  #site-title:hover::after { content: " ✎"; font-size: 14px; color: var(--muted); font-weight: 400; }
+  #site-title[contenteditable="true"] { background: var(--bg); box-shadow: 0 0 0 2px var(--accent); }
+  #site-title[contenteditable="true"]::after { content: none; }
+  .palette-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 15px; flex: none; }
+  .palette-btn:hover { background: var(--bg); }
+  .palettes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px; background: var(--bg); border-radius: 10px; }
+  .palettes[hidden] { display: none; }   /* sinon display:flex l'emporte sur l'attribut hidden */
+  .palette-btn[aria-expanded="true"] { background: var(--bg); box-shadow: inset 0 0 0 1px var(--text); }
+  .palettes button { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; color: var(--text); font: inherit; font-size: 11px; cursor: pointer; padding: 2px; }
+  .palettes .sw { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+  .palettes button.on .sw { box-shadow: 0 0 0 2px var(--text); }
+  .ph-head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .stats { display: flex; gap: 18px; margin-top: 12px; }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+  .btn:hover { background: var(--bg); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  /* Mode lecture (version en ligne) : pas d'ajout, de sauvegarde ni de modification */
+  body.lecture #btn-add, body.lecture #btn-wish, body.lecture #btn-export, body.lecture .edit-btn { display: none !important; }
+  body.lecture .actions { display: none; }
+  body.lecture .trip-row .trip { padding-right: 8px; }
+  body.lecture #site-title { cursor: default; }
+  body.lecture #site-title:hover { background: none; }
+  body.lecture #site-title:hover::after { content: none; }
+  /* Boutons « Sélectionner des fichiers » : même style que .btn */
+  input[type=file] { width: 100%; font: inherit; font-size: 13px; color: var(--muted); }
+  input[type=file]::file-selector-button { font: inherit; font-size: 13px; padding: 6px 12px; margin-right: 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; transition: background .15s; }
+  input[type=file]::file-selector-button:hover { background: var(--bg); }
+  input[type=file]:focus-visible { outline: none; }
+  input[type=file]:focus-visible::file-selector-button { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .scroll { overflow-y: auto; flex: 1; padding: 8px 12px 16px; }
+  .group { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 8px 6px; }
+  .trip { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; background: none; color: inherit; font: inherit; padding: 8px; border-radius: 10px; cursor: pointer; }
+  .trip:hover, .trip:focus-visible { background: var(--bg); outline: none; }
+  /* Ville ouverte : contour complet couleur d'accent + ombre portée marquée */
+  .trip.on { position: relative; z-index: 1; background: var(--surface); box-shadow: 0 0 0 2px var(--accent), 0 8px 18px rgba(0, 0, 0, .35); }
+  .trip .cover { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex: none; background: var(--line); }
+  .trip .cover.none { display: grid; place-items: center; color: var(--ghost); font-size: 20px; }
+  .trip .t-name { font-weight: 600; }
+  .trip .t-meta { font-size: 13px; color: var(--muted); }
+
+  /* Formulaire d'ajout */
+  .form { padding: 6px 8px; }
+  .form h2 { font-size: 16px; margin: 6px 0 12px; }
+  .field { margin-bottom: 14px; }
+  .field > label, .field > .lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .field input[type=text], .field input[type=date], .field select {
+    width: 100%; font: inherit; font-size: 14px; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .row2 { display: flex; gap: 8px; }
+  .row2 > * { flex: 1; min-width: 0; }
+  .sub-box { border-left: 3px solid var(--line); padding: 4px 0 2px 10px; margin-top: 8px; }
+  .loc { display: flex; gap: 6px; margin-top: 6px; }
+  .loc input { flex: 1; min-width: 0; }
+  .results { margin-top: 4px; }
+  .results button { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+  .results button:hover { background: var(--bg); }
+  .pos { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pos.ok { color: var(--ok); }
+  .help { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .previews { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; }
+  .previews img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
+  .previews.objs img { object-fit: contain; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
+  .msg { font-size: 13px; margin: 8px 0; color: var(--ok); }
+  .msg.err { color: var(--accent); }
+  /* Villes à visiter : envie (cœur, contour rose) / à venir (avion, fond bleu) */
+  :root { --wish: #d6457a; --planned: #2f6fd6; }
+  .wish-marker { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.3); transition: transform .15s; }
+  .wish-marker:hover { transform: scale(1.15); }
+  .wish-marker.wish, .wish-ico.wish { background: #fff; color: var(--wish); border: 3px solid var(--wish); }
+  .wish-marker.planned, .wish-ico.planned { background: var(--planned); color: #fff; border: 3px solid #fff; }
+  .wish-ico { display: grid !important; place-items: center; border-radius: 50% !important; width: 40px !important; height: 40px !important; margin: 6px; }
+  .wish-row .trip { padding-right: 76px; }
+  .edit-btn.second { right: 38px; }
+  .leaflet-tooltip.lbl .tt-sub { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kind { display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 14px; }
+  .kind input { position: absolute; opacity: 0; pointer-events: none; }
+  .kind .wish-ico { width: 30px !important; height: 30px !important; margin: 0; flex: none; }
+  .kind:has(input:checked) { border-color: var(--text); background: var(--bg); }
+  .kind:has(input:focus-visible) { outline: 2px solid var(--accent); }
+  .actions { flex-wrap: wrap; }
+  /* Image Instagram : bouton dans la liste + fenêtre de création */
+  .trip-row.has-insta .trip { padding-right: 76px; }
+  .insta-btn svg { display: block; margin: auto; }
+  body.lecture .trip-row.has-insta .trip { padding-right: 40px; }
+  body.lecture .insta-btn { display: block !important; right: 6px; }
+  #insta { position: fixed; inset: 0; z-index: 1100; background: rgba(10, 10, 9, .8); display: none; align-items: center; justify-content: center; padding: 16px; }
+  #insta.open { display: flex; }
+  #insta .box { background: var(--surface); color: var(--text); border-radius: 14px; box-shadow: var(--shadow); display: flex; gap: 20px; padding: 20px;
+    max-width: 1100px; width: 100%; max-height: calc(100vh - 32px); overflow: auto; }
+  #insta canvas { width: min(62vh, 560px); height: auto; aspect-ratio: 1; border-radius: 6px; flex: none; background: var(--line); }
+  #insta .side { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 14px; }
+  #insta h2 { margin: 0; font-size: 18px; }
+  #insta .lbl { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  #insta .frames { display: flex; gap: 8px; flex-wrap: wrap; }
+  #insta .frames button { display: flex; align-items: center; gap: 6px; }
+  #insta .frames button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
+  #insta .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; max-height: 280px; overflow: auto; }
+  #insta .thumbs button { padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; cursor: pointer; aspect-ratio: 1; background: var(--line); }
+  #insta .thumbs button { position: relative; }
+  #insta .thumbs button.on { border-color: var(--accent); }
+  #insta .thumbs .num { position: absolute; top: 3px; right: 3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+  #insta .thumbs .num:empty { display: none; }
+  #insta .thumbs .ex.obj { background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
+  #insta .thumbs .ex.obj img { object-fit: contain; padding: 4px; }
+  #insta .thumbs .ex.note { display: grid; place-items: center; padding: 4px; color: #3a3420; }
+  #insta .thumbs .ex.note .txt { font: 10px/1.2 "Segoe Print", "Comic Sans MS", cursive; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; word-break: break-word; }
+  #insta #insta-extras { max-height: 160px; }
+  #insta .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #insta .err { color: var(--accent); font-size: 13px; }
+  #insta .row2 { display: flex; gap: 8px; margin-top: auto; }
+  @media (max-width: 720px) { #insta .box { flex-direction: column; } #insta canvas { width: 100%; } }
+  /* Amis : bandeau en vue « carte d'un ami », liste des amis */
+  .friend-banner { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px -6px 12px; padding: 8px 8px 8px 12px;
+    border-radius: 10px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; }
+  .friend-banner[hidden] { display: none; }
+  .friend-banner .btn { background: rgba(255,255,255,.95); color: #1d1c1a; border-color: transparent; font-weight: 600; white-space: nowrap; }
+  body.friend-view #btn-palette, body.friend-view .insta-btn { display: none !important; }
+  .group-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 8px 6px; }
+  .group-row .group { margin: 0; }
+  .group-row .btn { font-size: 12px; padding: 4px 10px; }
+  .group-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .friend-ava { display: grid !important; place-items: center; border-radius: 50% !important; color: #fff; font-weight: 700; font-size: 20px; }
+  .friends-empty { margin: 4px 8px 8px; font-size: 13px; color: var(--muted); }
+  .empty-state { margin: 12px 8px; padding: 14px; border-radius: 10px; background: var(--bg); font-size: 14px; line-height: 1.5; color: var(--muted); }
+  .empty-state b { color: var(--text); }
+  /* Sauvegarde : bouton rouge seulement s'il reste quelque chose à sauvegarder (masqué sinon) */
+  .btn.save-alert { background: #c62828; border-color: #c62828; color: #fff; font-weight: 600; }
+  .btn.save-alert:hover { background: #a91f1f; }
+  .btn.save-alert[hidden] { display: none; }
+  .share-sum { font-size: 13px; line-height: 1.5; padding: 10px 12px; border-radius: 8px; background: var(--bg); }
+  /* Tutoriel : zone mise en lumière + bulle d'explication */
+  #btn-help { font-weight: 700; color: var(--text); }
+  #tour { position: fixed; inset: 0; z-index: 1200; display: none; }
+  #tour.open { display: block; }
+  #tour .spot { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(10, 10, 9, .6); pointer-events: none;
+    transition: left .3s, top .3s, width .3s, height .3s; outline: 3px solid var(--accent); outline-offset: 3px; }
+  #tour .spot.none { width: 0 !important; height: 0 !important; outline: none; left: 50% !important; top: 50% !important; }
+  #tour .bubble { position: fixed; width: min(340px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 18px 18px 14px; transition: left .3s, top .3s; }
+  #tour .step { font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+  #tour h3 { margin: 4px 0 6px; font-size: 17px; }
+  #tour p { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+  #tour p b { color: var(--text); }
+  #tour .nav { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  #tour .nav .skip { margin-right: auto; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; padding: 6px 0; }
+  #tour .nav .skip:hover { color: var(--text); text-decoration: underline; }
+  #tour .dots { display: flex; gap: 4px; margin-top: 12px; }
+  #tour .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+  #tour .dots i.on { background: var(--accent); }
+  /* Modification des dates depuis la liste */
+  .trip-row { position: relative; }
+  .trip-row .trip { padding-right: 40px; }
+  .edit-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 8px;
+    border: 0; background: none; color: var(--muted); font-size: 15px; cursor: pointer; opacity: .45; transition: opacity .15s, background .15s;
+    z-index: 2; }   /* au-dessus de la ligne sélectionnée (.trip.on a z-index: 1) */
+  .trip-row:has(.trip.on) .edit-btn { opacity: .8; }
+  .trip-row:hover .edit-btn, .edit-btn:focus-visible { opacity: 1; }
+  .edit-btn:hover { background: var(--line); color: var(--text); }
+  .date-edit { margin: 2px 8px 10px 72px; display: grid; gap: 6px; }
+  .date-edit .row2 input { width: 100%; font: inherit; font-size: 13px; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .date-edit .help { margin: 0; }
+
+  /* Marqueurs */
+  .city-marker { display: grid; place-items: center; border-radius: 50%; color: #fff; font-weight: 700; font-size: 12px;
+    background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 2px 8px rgba(0,0,0,.3); transition: transform .15s; }
+  .city-marker:hover, .city-marker.on { transform: scale(1.15); }
+  .city-marker.empty { background: var(--surface); border: 3px solid var(--ghost); }
+  /* Marqueur avec la photo de couverture de la ville */
+  .city-photo { width: 100%; height: 100%; border-radius: 12px; border: 4px solid #fffdf8; background: #ddd center / cover no-repeat;
+    box-shadow: 0 3px 10px rgba(0,0,0,.35); transform: rotate(var(--r, 0deg)); transition: transform .15s, box-shadow .15s; }
+  .city-photo:hover, .city-photo.on { transform: rotate(0deg) scale(1.18); box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+  .city-photo.on { border-color: var(--accent); }
+  .pick-marker { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 4px rgba(210, 85, 58, .35); }
+  .leaflet-tooltip.lbl { background: var(--surface); color: var(--text); border: 0; box-shadow: var(--shadow); border-radius: 6px; font: 600 13px system-ui, sans-serif; padding: 3px 8px; }
+  .leaflet-tooltip.lbl::before { display: none; }
+  .leaflet-container { font: inherit; }
+  .leaflet-control-zoom a { background: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; }
+  .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 80%, transparent) !important; color: var(--muted) !important; }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  .pick-hint { position: absolute; z-index: 600; top: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg);
+    padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow); display: none; }
+  .pick-hint.on { display: block; }
+
+  /* Photos déposées sur la carte */
+  .spread { position: relative; width: 0; height: 0; }
+  .spread .title { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); white-space: nowrap;
+    background: var(--text); color: var(--bg); font-weight: 700; font-size: 14px; padding: 5px 12px; border-radius: 999px;
+    box-shadow: var(--shadow); z-index: 100; pointer-events: none; opacity: 0; transition: opacity .3s .1s; }
+  .spread.in .title { opacity: 1; }
+  .polaroid {
+    position: absolute; left: 0; top: 0; width: var(--pw); padding: 7px 7px 0; background: #fffdf8; border-radius: 2px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.28), 0 1px 3px rgba(0,0,0,.2); cursor: zoom-in; border: 0; font: inherit; pointer-events: auto;
+    transform: translate(-50%, -50%) rotate(0deg) scale(.2); opacity: 0;
+    transition: transform .55s cubic-bezier(.2, .9, .3, 1.15), opacity .3s, box-shadow .2s;
+  }
+  .spread.in .polaroid { opacity: 1; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)) scale(1); }
+  .spread.in .polaroid:hover, .spread.in .polaroid:focus-visible {
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(0deg) scale(1.6);
+    z-index: 200 !important; box-shadow: 0 14px 40px rgba(0,0,0,.4); outline: none; transition-delay: 0s !important;
+  }
+  /* Leaflet force width:auto sur les images des marqueurs : on reprend la main */
+  .leaflet-container .spread .polaroid img { display: block; width: 100% !important; height: auto; aspect-ratio: 1; object-fit: cover; background: #ddd; }
+  /* Objets PNG détourés : sans cadre, avec une ombre qui suit la forme */
+  .objet { position: absolute; left: 0; top: 0; width: var(--ow); pointer-events: auto; z-index: 60; opacity: 0;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); transform: translate(-50%, -50%) rotate(0deg) scale(.2);
+    transition: transform .55s cubic-bezier(.2, .9, .3, 1.15), opacity .3s; }
+  .spread.in .objet { opacity: 1; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)) scale(1); }
+  .spread.in .objet:hover { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(0deg) scale(1.45); z-index: 200; transition-delay: 0s !important; }
+  .leaflet-container .spread .objet img { display: block; width: 100% !important; height: auto; }
+  /* Éléments privés et boutons privé / supprimer */
+  .polaroid i.lock { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(0,0,0,.65); color: #fff; }
+  .obj-tools { position: absolute; top: -12px; right: -8px; display: flex; gap: 4px; z-index: 5; opacity: 0; transition: opacity .15s; }
+  .objet:hover .obj-tools, .obj-tools:focus-within { opacity: 1; }
+  .obj-tools button { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(0,0,0,.65); color: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .obj-tools button:hover, .obj-tools button:focus-visible { background: #000; outline: none; }
+  .objet.priv .obj-tools { opacity: 1; }
+  .objet.priv .obj-tools [data-act="del"] { display: none; }
+  .objet.priv:hover .obj-tools [data-act="del"], .objet.priv .obj-tools:focus-within [data-act="del"] { display: grid; }
+  /* Post-it : carré de couleur, écriture manuscrite, petit morceau de scotch en haut */
+  .postit { aspect-ratio: 1; display: grid; place-items: center; padding: 12% 10% 10%; background: #fff27a; color: #3a3420;
+    font: 400 calc(var(--ow) * .095)/1.25 "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; text-align: center;
+    filter: none; box-shadow: 0 10px 14px -6px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.15); border-radius: 2px 2px 14px 2px / 2px 2px 8px 2px; }
+  .postit span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; word-break: break-word; }
+  .postit::before { content: ""; position: absolute; top: -9px; left: 50%; width: 38%; height: 18px; translate: -50% 0; rotate: -3deg;
+    background: rgba(255,255,255,.55); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .postit.rose { background: #ffb7c9; } .postit.bleu { background: #b6defb; } .postit.vert { background: #c4ecb0; }
+  .note-colors { display: flex; gap: 8px; margin-top: 6px; }
+  .note-colors label { cursor: pointer; }
+  .note-colors input { position: absolute; opacity: 0; pointer-events: none; }
+  .note-colors span { display: block; width: 26px; height: 26px; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); }
+  .note-colors input:checked + span { box-shadow: 0 0 0 2px var(--text); }
+  .note-colors input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #f-note { width: 100%; font: inherit; font-size: 14px; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); resize: vertical; }
+  .polaroid span { display: block; font-size: 12px; line-height: 1.2; color: #4a4640; text-align: center; padding: 6px 2px 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "Segoe Print", "Bradley Hand", cursive; }
+
+  /* Visionneuse */
+  #lb { position: fixed; inset: 0; z-index: 1000; background: rgba(10, 10, 9, .93); display: none; flex-direction: column; }
+  #lb.open { display: flex; }
+  #lb .stage { flex: 1; display: grid; place-items: center; min-height: 0; padding: 16px 64px 0; }
+  #lb img { max-width: 100%; max-height: calc(100vh - 150px); object-fit: contain; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #lb button { position: absolute; border: 0; background: rgba(255,255,255,.1); color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 22px; cursor: pointer; }
+  #lb button:hover { background: rgba(255,255,255,.22); }
+  #lb .prev { left: 12px; top: 50%; transform: translateY(-50%); }
+  #lb .next { right: 12px; top: 50%; transform: translateY(-50%); }
+  #lb .close { right: 12px; top: 12px; }
+  /* Barre sous la photo : légende modifiable + infos à gauche, actions à droite */
+  #lb .cap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap;
+    width: min(920px, calc(100vw - 32px)); margin: 14px auto 18px; padding: 10px 12px 10px 16px; box-sizing: border-box;
+    background: rgba(30, 29, 27, .94); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; color: #f2f0eb;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35); font-size: 14px; }
+  #lb .cap-main { flex: 1 1 260px; min-width: 0; text-align: left; }
+  #lb .cap-main b { font-size: 18px; }
+  #lb .cap-title { display: flex; align-items: center; gap: 6px; }
+  /* le champ prend la largeur de son texte (crayon juste à côté) */
+  #lb .cap-edit { flex: 0 1 auto; field-sizing: content; min-width: 4ch; max-width: 100%; margin-left: -8px; padding: 4px 8px; border: 1px solid transparent; border-radius: 8px;
+    background: transparent; color: #fff; font: 600 18px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; cursor: text; }
+  #lb .cap-edit:hover { background: rgba(255,255,255,.06); }
+  #lb .cap-edit:focus { outline: none; background: rgba(255,255,255,.1); border-color: var(--accent); }
+  #lb .cap-title .pen { color: #9a968e; display: grid; flex: none; transition: opacity .15s; }
+  #lb .cap-title:focus-within .pen { opacity: 0; }
+  #lb .cap-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 2px; font-size: 13px; color: #aaa69d; }
+  #lb .cap .saved { color: #8fd6ad; opacity: 0; transition: opacity .3s; }
+  #lb .cap .saved.on { opacity: 1; }
+  #lb .cap-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  #lb .cap .lb-act { position: static; width: auto; height: 36px; padding: 0 13px; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px;
+    font: 500 13px system-ui, -apple-system, "Segoe UI", sans-serif; color: #f2f0eb; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); }
+  #lb .cap .lb-act:hover, #lb .cap .lb-act:focus-visible { background: rgba(255,255,255,.15); outline: none; }
+  #lb .cap .lb-act.on { background: #f2f0eb; color: #1b1a18; border-color: #f2f0eb; }
+  #lb .cap .cover-btn.on { cursor: default; }
+  #lb .cap .del-btn:hover, #lb .cap .del-btn:focus-visible { background: #b3261e; border-color: #b3261e; color: #fff; }
+
+  /* Menu rétractable : languette accrochée au bord droit du panneau (en bas sur mobile) */
+  #btn-collapse { position: absolute; z-index: 510; top: 28px; left: 376px; width: 26px; height: 48px; border: 0;
+    border-radius: 0 10px 10px 0; background: var(--surface); color: var(--muted); box-shadow: 4px 2px 10px rgba(0,0,0,.12);
+    font-size: 18px; cursor: pointer; transition: left .35s cubic-bezier(.4, 0, .2, 1), bottom .35s cubic-bezier(.4, 0, .2, 1); }
+  #btn-collapse:hover { color: var(--text); }
+  body.collapsed #panel { transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
+  body.collapsed #btn-collapse { left: 0; }
+  #panel.intro ~ #btn-collapse { animation: panel-in .6s 1.35s cubic-bezier(.2, .8, .3, 1) both; }
+  @media (max-width: 720px) {
+    #panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 40vh; border-radius: 16px 16px 0 0; }
+    #btn-collapse { top: auto; left: 50%; bottom: 40vh; width: 56px; height: 24px; margin-left: -28px; border-radius: 10px 10px 0 0; box-shadow: 0 -3px 10px rgba(0,0,0,.12); }
+    body.collapsed #panel { transform: translateY(100%); }
+    body.collapsed #btn-collapse { left: 50%; bottom: 0; }
+    .ph-head { padding: 14px 16px 10px; }
+    #lb .stage { padding: 12px 12px 0; }
+    #lb .prev, #lb .next { top: 38%; width: 38px; height: 38px; font-size: 20px; }
+    #lb .cap { padding: 12px; }
+    #lb .cap-actions { width: 100%; }
+    #lb .cap .lb-act { flex: 1; justify-content: center; padding: 0 8px; }
+  }
+</style>
+</head>
+<body>
+<div id="map" class="intro"></div>
+<div id="folds" class="intro" aria-hidden="true"></div>
+<div class="pick-hint" id="pick-hint">Clique sur la carte pour placer le point — Échap pour annuler</div>
+<aside id="panel" class="intro">
+  <div class="ph-head">
+    <div class="friend-banner" id="friend-banner" hidden>
+      <span id="friend-banner-txt"></span>
+      <button type="button" class="btn" id="btn-back-mine">← Ma carte</button>
+    </div>
+    <div class="title-row">
+      <h1 id="site-title" title="Clique pour modifier le titre" spellcheck="false">Mes voyages en Europe</h1>
+      <button class="palette-btn" id="btn-help" title="Découvrir le fonctionnement de la carte" aria-label="Lancer le tutoriel">?</button>
+      <button class="palette-btn" id="btn-palette" title="Changer les couleurs" aria-label="Changer les couleurs" aria-expanded="false">🎨</button>
+    </div>
+    <div class="palettes" id="palettes" hidden></div>
+    <div class="sub">Clique sur une ville pour étaler ses photos sur la carte</div>
+    <div class="stats" id="stats"></div>
+    <div class="actions">
+      <button class="btn primary" id="btn-add">＋ Ajouter</button>
+      <button class="btn" id="btn-wish" title="Ajouter une ville où tu as envie d'aller ou un voyage prévu">♡ À visiter</button>
+      <button class="btn save-alert" id="btn-export" hidden></button>
+    </div>
+    <input type="file" id="friend-file" accept=".json,application/json" hidden>
+  </div>
+  <div class="scroll" id="content"></div>
+</aside>
+<div id="tour" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+  <div class="spot"></div>
+  <div class="bubble">
+    <div class="step" id="tour-step"></div>
+    <h3 id="tour-title"></h3>
+    <div id="tour-text"></div>
+    <div class="dots" id="tour-dots"></div>
+    <div class="nav">
+      <button type="button" class="skip" id="tour-skip">Passer le tutoriel</button>
+      <button type="button" class="btn" id="tour-prev">Précédent</button>
+      <button type="button" class="btn primary" id="tour-next">Suivant</button>
+    </div>
+  </div>
+</div>
+<div id="insta" role="dialog" aria-modal="true" aria-labelledby="insta-title">
+  <div class="box">
+    <canvas id="insta-canvas" width="1080" height="1080" aria-label="Aperçu de l'image Instagram"></canvas>
+    <div class="side">
+      <h2 id="insta-title">Image Instagram</h2>
+      <div><div class="lbl">Cadre</div><div class="frames" id="insta-frames"></div></div>
+      <div><div class="lbl">Photos <span class="help" id="insta-count"></span></div>
+        <div class="help" style="margin:-2px 0 6px">Clique pour ajouter ou retirer une photo. À partir de 2, elles sont posées en polaroïds sur la carte (12 max).</div>
+        <div class="thumbs" id="insta-thumbs"></div></div>
+      <div hidden><div class="lbl">Objets et post-it <span class="help">(6 max, posés sur les côtés)</span></div>
+        <div class="thumbs" id="insta-extras"></div></div>
+      <div class="err" id="insta-err" hidden></div>
+      <div class="row2">
+        <button type="button" class="btn primary" id="insta-dl">Télécharger l'image</button>
+        <button type="button" class="btn" id="insta-close">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+<button id="btn-collapse" aria-controls="panel" aria-expanded="true" title="Réduire le menu">‹</button>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="stage"><img id="lb-img" alt=""></div>
+  <div class="cap" id="lb-cap"></div>
+  <button class="prev" aria-label="Précédente">‹</button>
+  <button class="next" aria-label="Suivante">›</button>
+  <button class="close" aria-label="Fermer">×</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- data.js : les voyages de base. ajouts.js (facultatif) : la sauvegarde des ajouts faits depuis cette page. -->
+<!-- config.js (facultatif) : window.MODE_LECTURE = true pour la version publiée en ligne (pas de boutons de modification) -->
+<script src="config.js" onerror="void 0"></script>
+<script src="data.js"></script>
+<script src="ajouts.js" onerror="void 0"></script>
+<!-- amis-par-defaut.js (facultatif) : cartes d'amis ajoutées au premier lancement (ex. carte d'exemple) -->
+<script src="amis-par-defaut.js" onerror="void 0"></script>
+<script>
+const BASE = window.TRIPS || [];
+// Version publiée (config.js) : consultation seule, les boutons de modification sont masqués
+const LECTURE = !!window.MODE_LECTURE;
+if (LECTURE) document.body.classList.add('lecture');
+// Carte d'un ami affichée (id de son import), ou null pour ma carte. Dans les deux cas « ro() » = lecture seule.
+let VIEW = null, FRIENDS = [];
+const ro = () => LECTURE || !!VIEW;
+const MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const mobile = () => innerWidth <= 720;
+const uid = p => `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+function range(c) {
+  const [y1, m1, d1] = c.start.split('-').map(Number), [y2, m2, d2] = (c.end || c.start).split('-').map(Number);
+  if (c.start === (c.end || c.start)) return `${d1} ${MONTHS[m1 - 1]} ${y1}`;
+  if (y1 === y2 && m1 === m2) return `${d1} – ${d2} ${MONTHS[m1 - 1]} ${y1}`;
+  if (y1 === y2) return `${d1} ${MONTHS[m1 - 1]} – ${d2} ${MONTHS[m2 - 1]} ${y1}`;
+  return `${d1} ${MONTHS[m1 - 1]} ${y1} – ${d2} ${MONTHS[m2 - 1]} ${y2}`;
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [d, t] = iso.split('T'); const [y, m, dd] = d.split('-').map(Number);
+  return `${dd} ${MONTHS[m - 1]} ${y}${t ? ' · ' + t.slice(0, 5).replace(':', 'h') : ''}`;
+}
+
+/* ---------- Stockage des ajouts (IndexedDB, photos en Blob) ---------- */
+const store = {
+  db: null, mem: [],
+  async open() {
+    try {
+      this.db = await new Promise((res, rej) => {
+        const r = indexedDB.open('carte-voyages', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('items', { keyPath: 'id' });
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      });
+    } catch (e) { this.db = null; }
+  },
+  async all() {
+    if (!this.db) return this.mem.slice();
+    return new Promise((res, rej) => { const r = this.db.transaction('items').objectStore('items').getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  },
+  onChange: null,   // appelé après chaque modification de mes données (sauvegarde automatique)
+  async put(items) {
+    if (!this.db) { for (const it of items) { this.mem = this.mem.filter(m => m.id !== it.id); this.mem.push(it); } }
+    else await new Promise((res, rej) => { const tx = this.db.transaction('items', 'readwrite'); const s = tx.objectStore('items'); items.forEach(i => s.put(i)); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    // Cartes d'amis et réglages internes ne font pas partie de ma sauvegarde
+    if (items.some(i => i.type !== 'friend' && i.type !== 'system')) this.onChange?.();
+  },
+  // Suppression réelle (utilisée pour les cartes d'amis, qu'on peut réimporter ensuite)
+  async del(id) {
+    if (!this.db) { this.mem = this.mem.filter(m => m.id !== id); return; }
+    await new Promise((res, rej) => { const tx = this.db.transaction('items', 'readwrite'); tx.objectStore('items').delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  }
+};
+let ITEMS = [];          // ajouts bruts (villes, lieux, dates, photos, suppressions)
+const urlCache = {};     // id photo -> { full, mini } (URL objet)
+
+const blobToDataURL = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+const dataURLToBlob = async d => (await fetch(d)).blob();
+
+// Importe ajouts.js (sauvegarde) dans le stockage du navigateur, sans doublons
+async function importBackup() {
+  if (!Array.isArray(window.AJOUTS)) return;
+  const have = new Set(ITEMS.map(i => i.id));
+  const add = [];
+  for (const it of window.AJOUTS) {
+    if (have.has(it.id)) continue;
+    const copy = { ...it };
+    if (it.type === 'photo') { copy.full = await dataURLToBlob(it.full); copy.mini = await dataURLToBlob(it.mini); }
+    if (it.type === 'object') copy.img = await dataURLToBlob(it.img);
+    add.push(copy);
+  }
+  if (add.length) { await store.put(add); ITEMS = await store.all(); }
+}
+
+/* ---------- Fusion : voyages de base + ajouts ---------- */
+let TRIPS = [];
+function buildTrips() {
+  const deleted = new Set(ITEMS.filter(i => i.type === 'deleted').map(i => i.target));
+  const live = ITEMS.filter(i => i.type !== 'deleted' && !deleted.has(i.id));
+  FRIENDS = live.filter(i => i.type === 'friend').sort((a, b) => a.name.localeCompare(b.name));
+  // Carte d'un ami : on affiche son instantané tel qu'exporté, sans rien y mélanger
+  const f = VIEW && FRIENDS.find(x => x.id === VIEW);
+  if (f) {
+    TRIPS = friendTrips(f); CAPTIONS = {}; PRIVATE = new Set();
+    for (const c of TRIPS) { const all = photosOf(c); c.coverPhoto = all.find(p => p.id === c.cover) || all[0] || null; }
+    WISHES = (f.wishes || []).map(w => ({ ...w }));
+    SETTINGS = { title: f.settings?.title || `Carte de ${f.name}`, palette: f.settings?.palette || 'classique' };
+    return;
+  }
+  VIEW = null;
+  const cities = BASE.map(c => ({ ...c,
+    places: c.places.map(p => ({ ...p, photos: p.photos.map(ph => ({ ...ph, full: `photos/${encodeURIComponent(ph.id)}.jpg`, mini: `mini/${encodeURIComponent(ph.id)}.jpg` })) })),
+    objects: (c.objects || []).map(o => ({ id: o.id, private: o.private, src: `objets/${encodeURIComponent(o.id)}.png` })),
+    notes: (c.notes || []).map(n => ({ ...n })) }));
+  const byName = n => cities.find(c => c.name.toLowerCase() === String(n).toLowerCase());
+  const baseIds = new Set(cities.flatMap(c => c.places.flatMap(p => p.photos.map(ph => ph.id))));
+
+  for (const it of live.filter(i => i.type === 'city')) {
+    if (!byName(it.name)) cities.push({ name: it.name, country: it.country || '', lat: it.lat, lon: it.lon, start: null, end: null, places: [], objects: [], notes: [], added: true });
+  }
+  for (const it of live.filter(i => i.type === 'dates')) {
+    const c = byName(it.city); if (c) { c.start = it.start; c.end = it.end || it.start; }
+  }
+  const placeOf = (c, name) => {
+    let p = c.places.find(p => name ? p.name === name : p.general);
+    if (!p) { p = { name: name || '', general: !name, lat: c.lat, lon: c.lon, photos: [] }; c.places.push(p); }
+    return p;
+  };
+  for (const it of live.filter(i => i.type === 'place')) {
+    const c = byName(it.city); if (!c) continue;
+    const p = placeOf(c, it.name); p.lat = it.lat ?? p.lat; p.lon = it.lon ?? p.lon;
+  }
+  for (const it of live.filter(i => i.type === 'photo').sort((a, b) => (a.date || '').localeCompare(b.date || ''))) {
+    if (baseIds.has(it.id)) continue;
+    const c = byName(it.city); if (!c) continue;
+    urlCache[it.id] ||= { full: URL.createObjectURL(it.full), mini: URL.createObjectURL(it.mini) };
+    placeOf(c, it.place).photos.push({ id: it.id, date: it.date, ...urlCache[it.id] });
+  }
+  // Objets (PNG détourés : billets, magnets…) posés à côté des photos
+  const baseObj = new Set(cities.flatMap(c => c.objects.map(o => o.id)));
+  for (const it of live.filter(i => i.type === 'object')) {
+    if (baseObj.has(it.id)) continue;
+    const c = byName(it.city); if (!c) continue;
+    urlCache[it.id] ||= { src: URL.createObjectURL(it.img) };
+    c.objects.push({ id: it.id, src: urlCache[it.id].src });
+  }
+  // Post-it : courts textes posés, comme les objets, à côté des photos
+  for (const it of live.filter(i => i.type === 'note')) {
+    const c = byName(it.city);
+    if (c && !c.notes.some(n => n.id === it.id)) c.notes.push({ id: it.id, text: it.text, color: it.color });
+  }
+  // Éléments privés (champ « private » de data.js, puis choix faits depuis la page) et éléments supprimés.
+  // Les privés restent visibles ici, mais pas dans une version partagée (MODE_LECTURE) ni publiée.
+  PRIVATE = new Set();
+  for (const c of cities) for (const x of [...c.objects, ...c.notes, ...c.places.flatMap(p => p.photos)]) if (x.private) PRIVATE.add(x.id);
+  for (const it of live.filter(i => i.type === 'private')) { if (it.on) PRIVATE.add(it.target); else PRIVATE.delete(it.target); }
+  const hidden = id => deleted.has(id) || (LECTURE && PRIVATE.has(id));
+  for (const c of cities) {
+    c.places.forEach(p => { p.photos = p.photos.filter(ph => !hidden(ph.id)); });
+    c.objects = c.objects.filter(o => !hidden(o.id)).map(o => ({ ...o, priv: PRIVATE.has(o.id) }));
+    c.notes = c.notes.filter(n => !hidden(n.id)).map(n => ({ ...n, priv: PRIVATE.has(n.id) }));
+  }
+  // Photo de couverture : celle choisie depuis la page, sinon le champ « cover » de data.js, sinon la première photo
+  for (const it of live.filter(i => i.type === 'cover')) {
+    const c = byName(it.city); if (c) c.cover = it.photo;
+  }
+  // Légendes modifiées depuis la visionneuse (texte vide = légende par défaut : le nom de la ville)
+  CAPTIONS = {};
+  for (const it of live.filter(i => i.type === 'caption')) CAPTIONS[it.photo] = it.text;
+  for (const c of cities) {
+    const all = photosOf(c);
+    c.coverPhoto = all.find(p => p.id === c.cover) || all[0] || null;
+  }
+  TRIPS = cities;
+  // Villes à visiter : « envie » (un jour) ou « à venir » (voyage prévu)
+  // (les ajouts faits depuis la page remplacent ceux de data.js qui ont le même id)
+  const byId = new Map();
+  for (const w of [...(window.WISHES || []), ...live.filter(i => i.type === 'wish')]) byId.set(w.id, w);
+  WISHES = [...byId.values()].filter(w => !deleted.has(w.id));
+  // Réglages : titre du site et palette de couleurs
+  SETTINGS = { title: 'Mes voyages en Europe', palette: 'classique', ...(window.SETTINGS || {}), ...(live.find(i => i.type === 'settings') || {}) };
+}
+let SETTINGS = { title: 'Mes voyages en Europe', palette: 'classique' };
+const PALETTES = {
+  classique: { label: 'Classique', colors: ['#f4f2ee', '#d2553a'] },
+  vintage:   { label: 'Vintage',   colors: ['#efe6d2', '#a0522d'] },
+  ocean:     { label: 'Océan',     colors: ['#e9f0f5', '#1f6fb2'] },
+  foret:     { label: 'Forêt',     colors: ['#edf1e8', '#3f7d4e'] },
+  lavande:   { label: 'Lavande',   colors: ['#f1eef7', '#7a5bc7'] },
+  nuit:      { label: 'Nuit',      colors: ['#1f1e1c', '#f07a5c'] }
+};
+function applySettings() {
+  const root = document.documentElement, p = PALETTES[SETTINGS.palette] ? SETTINGS.palette : 'classique';
+  if (p === 'classique') { delete root.dataset.palette; delete root.dataset.theme; }
+  else { root.dataset.palette = p; root.dataset.theme = p === 'nuit' ? 'dark' : 'light'; }
+  setTiles(p === 'nuit' || (p === 'classique' && matchMedia('(prefers-color-scheme: dark)').matches));
+  const h = document.getElementById('site-title');
+  if (h.getAttribute('contenteditable') !== 'true') h.textContent = SETTINGS.title;
+  document.title = SETTINGS.title;
+  setFavicon(PALETTES[p].colors[1]);
+  document.querySelectorAll('#palettes button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+}
+// Favicon plate : carte pliée et repère, dans la couleur d'accent de la palette
+function setFavicon(color) {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='${color}'/>`
+    + `<path d='M10 20l14-6v34l-14 6z' fill='#fdf3e7'/><path d='M24 14l16 6v34l-16-6z' fill='#f1d9bf'/><path d='M40 20l14-6v34l-14 6z' fill='#fdf3e7'/>`
+    + `<path d='M32 47s-10-9.5-10-17a10 10 0 0 1 20 0c0 7.5-10 17-10 17z' fill='${color}' stroke='#fff' stroke-width='3'/><circle cx='32' cy='30' r='3.6' fill='#fff'/></svg>`;
+  document.getElementById('favicon').href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+async function saveSettings(patch) {
+  await store.put([{ ...SETTINGS, ...patch, type: 'settings', id: 'settings' }]);
+  ITEMS = await store.all();
+  refresh();
+}
+let WISHES = [];
+const WISH_KINDS = {
+  wish: { label: 'Envie', group: 'Envies', meta: 'Un jour peut-être',
+    svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.2 4.4 2.5h2C13.8 6.2 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>' },
+  planned: { label: 'À venir', group: 'À venir', meta: 'Voyage prévu',
+    svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V8.5l-8 5v2l8-2.5V18l-2 1.5V21l3.5-1 3.5 1v-1.5L13 18v-5z"/></svg>' }
+};
+const wishMeta = w => [w.country, w.kind === 'planned' && w.date ? fmtDate(w.date) : WISH_KINDS[w.kind].meta].filter(Boolean).map(esc).join(' · ');
+let CAPTIONS = {}, PRIVATE = new Set();
+const photosOf = c => c.places.slice().sort((a, b) => b.general - a.general)
+  .flatMap(p => p.photos.map(ph => ({ ...ph, place: p.general ? c.name : p.name, general: p.general, city: c.name,
+    caption: CAPTIONS[ph.id] ?? ph.caption ?? '', priv: PRIVATE.has(ph.id) })));
+const LOCK_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+const UNLOCK_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.2"/></svg>';
+const TRASH_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+
+// Rendre privé / public, supprimer : enregistré comme les autres ajouts, puis carte et photos étalées mises à jour
+function reopenSpread() {
+  const open = spreadCity;
+  refresh();
+  if (open) { spreadCity = null; spread && map.removeLayer(spread); spread = null; toggleCity(open); }
+}
+async function setPrivate(id, on) {
+  await store.put([{ type: 'private', id: 'private-' + id, target: id, on }]);
+  ITEMS = await store.all(); reopenSpread();
+}
+async function removeElement(id, what) {
+  if (!confirm(`Supprimer ${what} de la carte ? Cette suppression est définitive.`)) return false;
+  await store.put([{ type: 'deleted', id: 'del-' + id, target: id }]);
+  ITEMS = await store.all(); reopenSpread();
+  return true;
+}
+
+/* ---------- Carte ---------- */
+const map = L.map('map', { zoomControl: false, minZoom: 2, maxZoom: 16, zoomSnap: 0.25, worldCopyJump: true, attributionControl: false }).setView([49, 9], 5);
+L.control.zoom({ position: 'topright' }).addTo(map);
+L.control.attribution({ position: mobile() ? 'topleft' : 'bottomright' }).addTo(map);
+// Fond minimaliste (Esri Canvas) : frontières, noms de pays et grandes villes. Version sombre si le système est en mode sombre.
+// Contrairement aux tuiles openstreetmap.org, il fonctionne aussi quand la page est ouverte par double-clic
+// (file://, sans en-tête Referer : OSM répond alors 403 « Access blocked »).
+// Fond clair ou sombre selon la palette (Classique = suit le système, Nuit = sombre, autres = clair)
+let tileLayers = [], tilesDark = null;
+function setTiles(dark) {
+  if (dark === tilesDark) return;
+  tilesDark = dark;
+  tileLayers.forEach(l => map.removeLayer(l));
+  const canvas = dark ? 'Dark_Gray' : 'Light_Gray';
+  tileLayers = [
+    L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${canvas}_Base/MapServer/tile/{z}/{y}/{x}`, {
+      maxZoom: 16, attribution: 'Fond &copy; Esri, HERE, Garmin, &copy; contributeurs <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }),
+    L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${canvas}_Reference/MapServer/tile/{z}/{y}/{x}`, {
+      maxZoom: 16, pane: 'overlayPane' })
+  ];
+  tileLayers.forEach(l => l.addTo(map));
+}
+setTiles(matchMedia('(prefers-color-scheme: dark)').matches);
+const markerLayer = L.layerGroup().addTo(map);
+let cityMarkers = {};
+// Zone de la carte cachée par le menu (rien quand il est rétracté)
+const collapsed = () => document.body.classList.contains('collapsed');
+const panelPad = () => mobile() || collapsed() ? [20, 20] : [400, 40];
+const bottomPad = () => mobile() && !collapsed() ? [20, innerHeight * 0.4 + 20] : [40, 40];
+// Marge supplémentaire pour que les photos de couverture (≈ 84 px) ne passent pas sous le panneau
+const fitAll = () => TRIPS.length && map.fitBounds(L.latLngBounds([...TRIPS, ...WISHES].map(c => [c.lat, c.lon])), {
+  paddingTopLeft: panelPad().map(v => v + 45), paddingBottomRight: bottomPad().map(v => v + 45) });
+
+function renderMarkers() {
+  markerLayer.clearLayers(); cityMarkers = {};
+  for (const [i, c] of TRIPS.entries()) {
+    const cover = c.coverPhoto;
+    const size = cover ? (mobile() ? 64 : 84) : 18;
+    // Légère inclinaison stable par ville (dérivée du nom) pour l'effet « photo posée »
+    const tilt = ([...c.name].reduce((s, ch) => s + ch.charCodeAt(0), 0) % 13) - 6;
+    const html = cover
+      ? `<div class="city-photo${popClass()}" style="--r:${tilt}deg;--d:${popDelay(i)}s;background-image:url('${cover.mini}')"></div>`
+      : `<div class="city-marker empty${popClass()}" style="width:${size}px;height:${size}px;--d:${popDelay(i)}s"></div>`;
+    const m = L.marker([c.lat, c.lon], {
+      icon: L.divIcon({ className: '', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+      keyboard: true, title: c.name, riseOnHover: true
+    }).addTo(markerLayer);
+    m.bindTooltip(esc(c.name), { className: 'lbl', direction: 'top', offset: [0, -size / 2 - 2] });
+    m.on('click', e => { L.DomEvent.stopPropagation(e); if (!pickCb) toggleCity(c.name); });
+    cityMarkers[c.name] = m;
+  }
+  wishMarkers = {};
+  for (const [i, w] of WISHES.entries()) {
+    const k = WISH_KINDS[w.kind] || WISH_KINDS.wish;
+    const m = L.marker([w.lat, w.lon], {
+      icon: L.divIcon({ className: '', html: `<div class="wish-marker ${w.kind}${popClass()}" style="--d:${popDelay(TRIPS.length + i)}s">${k.svg}</div>`, iconSize: [32, 32], iconAnchor: [16, 16] }),
+      keyboard: true, title: w.name, zIndexOffset: -500
+    }).addTo(markerLayer);
+    m.bindTooltip(`${esc(w.name)}<br><span class="tt-sub">${k.label} · ${wishMeta(w)}</span>`, { className: 'lbl', direction: 'top', offset: [0, -18] });
+    m.on('click', e => { L.DomEvent.stopPropagation(e); if (!pickCb) m.openTooltip(); });
+    wishMarkers[w.id] = m;
+  }
+}
+let wishMarkers = {};
+
+/* ---------- Panneau : liste ---------- */
+const content = document.getElementById('content');
+function renderStats() {
+  const total = TRIPS.reduce((s, c) => s + photosOf(c).length, 0);
+  const countries = new Set(TRIPS.map(c => c.country).filter(Boolean)).size;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><b>${TRIPS.length}</b><span>villes</span></div>
+    <div class="stat"><b>${countries}</b><span>pays</span></div>
+    <div class="stat"><b>${total}</b><span>photos</span></div>`;
+}
+function renderList() {
+  const dated = TRIPS.filter(c => c.start).sort((a, b) => b.start.localeCompare(a.start));
+  const undated = TRIPS.filter(c => !c.start).sort((a, b) => a.name.localeCompare(b.name));
+  const item = c => {
+    const ph = photosOf(c);
+    const cover = c.coverPhoto ? `<img class="cover" src="${c.coverPhoto.mini}" alt="">` : `<span class="cover none">○</span>`;
+    const count = ph.length ? ` · ${ph.length} photo${ph.length > 1 ? 's' : ''}` : '';
+    const meta = (c.start ? range(c) : esc(c.country)) + count;
+    const instaBtn = ph.length ? `<button class="edit-btn second insta-btn" data-insta="${esc(c.name)}" title="Créer une image Instagram" aria-label="Créer une image Instagram pour ${esc(c.name)}">${INSTA_ICON}</button>` : '';
+    return `<div class="trip-row${ph.length ? ' has-insta' : ''}"><button class="trip${spreadCity === c.name ? ' on' : ''}" data-city="${esc(c.name)}">${cover}<span><span class="t-name">${esc(c.name)}</span><br><span class="t-meta">${meta}</span></span></button>
+      ${instaBtn}<button class="edit-btn" data-city="${esc(c.name)}" title="Modifier les dates" aria-label="Modifier les dates de ${esc(c.name)}">✎</button></div>`;
+  };
+  const wishItem = w => {
+    const other = w.kind === 'planned' ? 'wish' : 'planned';
+    return `<div class="trip-row wish-row"><button class="trip" data-wish="${esc(w.id)}"><span class="cover wish-ico ${w.kind}">${WISH_KINDS[w.kind].svg}</span><span><span class="t-name">${esc(w.name)}</span><br><span class="t-meta">${wishMeta(w)}</span></span></button>
+      <button class="edit-btn second wish-swap" data-wish="${esc(w.id)}" title="Passer en « ${WISH_KINDS[other].label} »" aria-label="Passer ${esc(w.name)} en ${WISH_KINDS[other].label}">⇄</button>
+      <button class="edit-btn wish-del" data-wish="${esc(w.id)}" title="Retirer" aria-label="Retirer ${esc(w.name)}">✕</button></div>`;
+  };
+  const planned = WISHES.filter(w => w.kind === 'planned').sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+  const wishes = WISHES.filter(w => w.kind !== 'planned').sort((a, b) => a.name.localeCompare(b.name));
+  content.innerHTML = `
+    ${!TRIPS.length && !ro() ? `<div class="empty-state"><b>Ta carte est encore vide.</b><br>Clique sur <b>＋ Ajouter</b> pour créer ta première ville et y mettre tes photos. Le bouton <b>?</b> te fait faire le tour des fonctionnalités, et tu peux découvrir une carte d’exemple dans <b>Amis</b>.</div>` : ''}
+    ${planned.length ? `<div class="group">À venir</div>${planned.map(wishItem).join('')}` : ''}
+    ${dated.length ? `<div class="group">Voyages</div>${dated.map(item).join('')}` : ''}
+    ${undated.length ? `<div class="group">Aussi visitées</div>${undated.map(item).join('')}` : ''}
+    ${wishes.length ? `<div class="group">Envies</div>${wishes.map(wishItem).join('')}` : ''}
+    ${ro() ? '' : friendsHtml()}`;
+  bindFriends();
+  content.querySelectorAll('.trip[data-city]').forEach(b => b.onclick = () => toggleCity(b.dataset.city));
+  content.querySelectorAll('.edit-btn[data-city]').forEach(b => b.onclick = () => openDateEdit(b.closest('.trip-row'), b.dataset.city));
+  content.querySelectorAll('.insta-btn').forEach(b => b.onclick = () => openInsta(b.dataset.insta));
+  content.querySelectorAll('.trip[data-wish]').forEach(b => b.onclick = () => {
+    const w = WISHES.find(x => x.id === b.dataset.wish); closeSpread();
+    map.panTo([w.lat, w.lon]); setTimeout(() => wishMarkers[w.id]?.openTooltip(), 300);
+  });
+  content.querySelectorAll('.wish-swap').forEach(b => b.onclick = async () => {
+    const w = WISHES.find(x => x.id === b.dataset.wish);
+    await store.put([{ ...w, type: 'wish', kind: w.kind === 'planned' ? 'wish' : 'planned' }]);
+    ITEMS = await store.all(); refresh();
+  });
+  content.querySelectorAll('.wish-del').forEach(b => b.onclick = async () => {
+    const w = WISHES.find(x => x.id === b.dataset.wish);
+    if (!confirm(`Retirer « ${w.name} » de la carte ?`)) return;
+    await store.put([{ type: 'deleted', id: 'del-' + w.id, target: w.id }]);
+    ITEMS = await store.all(); refresh();
+  });
+}
+
+// Petit formulaire sous la ville pour modifier (ou retirer) ses dates de voyage
+function openDateEdit(row, name) {
+  content.querySelectorAll('.date-edit').forEach(f => f.remove());
+  const c = TRIPS.find(t => t.name === name); if (!c) return;
+  const f = document.createElement('form');
+  f.className = 'date-edit';
+  f.innerHTML = `
+    <div class="row2"><input type="date" name="start" value="${c.start || ''}" aria-label="Début"><input type="date" name="end" value="${c.end || ''}" aria-label="Fin"></div>
+    <div class="row2"><button type="submit" class="btn primary">Enregistrer</button><button type="button" class="btn cancel">Annuler</button></div>
+    <div class="help">Laisser vide pour retirer les dates (la ville passe dans « Aussi visitées »).</div>`;
+  row.after(f);
+  f.start.focus();
+  f.querySelector('.cancel').onclick = () => f.remove();
+  f.onkeydown = e => { if (e.key === 'Escape') { e.stopPropagation(); f.remove(); } };
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const start = f.start.value || null, end = f.end.value || start;
+    if (start && end < start) { f.querySelector('.help').textContent = 'La date de fin est avant la date de début.'; return; }
+    await store.put([{ type: 'dates', id: 'dates-' + name.toLowerCase(), city: name, start, end }]);
+    ITEMS = await store.all();
+    refresh();
+  };
+}
+function refresh() { buildTrips(); applySettings(); renderStats(); renderMarkers(); if (!editing) renderList(); }
+
+/* ---------- Menu rétractable (état mémorisé dans ce navigateur) ---------- */
+const collapseBtn = document.getElementById('btn-collapse');
+function setCollapsed(on) {
+  document.body.classList.toggle('collapsed', on);
+  const icon = mobile() ? (on ? '▴' : '▾') : (on ? '›' : '‹');
+  collapseBtn.textContent = icon;
+  collapseBtn.title = on ? 'Afficher le menu' : 'Réduire le menu';
+  collapseBtn.setAttribute('aria-expanded', String(!on));
+  try { localStorage.setItem('carte-menu-replie', on ? '1' : '0'); } catch (e) {}
+  // Les photos étalées se réorganisent pour profiter (ou laisser) la place du menu
+  if (spreadCity) { const open = spreadCity; setTimeout(() => { closeSpread(); setTimeout(() => toggleCity(open), 360); }, 50); }
+}
+collapseBtn.onclick = () => setCollapsed(!collapsed());
+
+/* ---------- Titre modifiable et choix de la palette ---------- */
+const titleEl = document.getElementById('site-title');
+titleEl.onclick = () => {
+  if (ro() || titleEl.getAttribute('contenteditable') === 'true') return;
+  titleEl.setAttribute('contenteditable', 'true'); titleEl.focus();
+  getSelection().selectAllChildren(titleEl);
+};
+titleEl.onkeydown = e => {
+  if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+  if (e.key === 'Escape') { titleEl.textContent = SETTINGS.title; titleEl.blur(); }
+};
+titleEl.onblur = () => {
+  titleEl.setAttribute('contenteditable', 'false');
+  const t = titleEl.textContent.replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (!t) { titleEl.textContent = SETTINGS.title; return; }   // titre vide : on garde l'ancien
+  titleEl.textContent = t;
+  if (t !== SETTINGS.title) saveSettings({ title: t });
+};
+const palBox = document.getElementById('palettes'), palBtn = document.getElementById('btn-palette');
+palBox.innerHTML = Object.entries(PALETTES).map(([k, p]) =>
+  `<button type="button" data-p="${k}" title="${p.label}"><span class="sw" style="background:linear-gradient(135deg, ${p.colors[0]} 50%, ${p.colors[1]} 50%)"></span>${p.label}</button>`).join('');
+const showPalettes = on => { palBox.hidden = !on; palBtn.setAttribute('aria-expanded', String(on)); };
+palBtn.onclick = () => showPalettes(palBox.hidden);
+// Un clic ailleurs referme le choix de palette
+document.addEventListener('click', e => { if (!palBox.hidden && !palBox.contains(e.target) && e.target !== palBtn) showPalettes(false); });
+palBox.querySelectorAll('button').forEach(b => b.onclick = () => saveSettings({ palette: b.dataset.p }));
+
+/* ---------- Photos étalées autour de la ville ---------- */
+let spread = null, spreadCity = null;
+// Disposition en grille lâche (photos qui se chevauchent un peu, inclinées) centrée sur la ville,
+// avec la plus grande taille de polaroid qui tient dans la partie visible de la carte.
+// Les objets (nObj) sont posés en colonnes de part et d'autre de la grille de photos.
+function layoutFit(n, nObj = 0) {
+  const size = map.getSize(), [pl, pt] = panelPad(), [pr, pb] = bottomPad();
+  const W0 = size.x - pl - pr - 30, H = size.y - pt - pb - 30, RATIO = 1.2;   // hauteur ≈ 1,2 × largeur (marge du bas)
+  const objW = nObj ? Math.min(mobile() ? 90 : 170, W0 * 0.2) : 0;           // place réservée à chaque colonne d'objets
+  const objs = [];
+  const jit = s => (Math.random() - 0.5) * s;
+  if (!n) {
+    // Pas de photos : les objets seuls, en ligne au centre
+    const ow = Math.min(objW * 1.3, W0 / Math.max(nObj, 1));
+    for (let i = 0; i < nObj; i++) objs.push({ x: (i - (nObj - 1) / 2) * ow + jit(ow * 0.1), y: jit(ow * 0.2), r: jit(14), w: ow * 0.92 });
+    return { pw: 0, pos: [], objs };
+  }
+  const W = W0 - 2 * objW;
+  let best = { cell: 0, cols: 1, rows: n };
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const cell = Math.min(W / cols, H / (rows * RATIO));
+    if (cell > best.cell) best = { cell, cols, rows };
+  }
+  const { cols, rows } = best;
+  const cell = Math.min(best.cell, mobile() ? 130 : 230);
+  const pw = Math.round(cell * 1.08);                        // un peu plus grand que la case : léger chevauchement
+  const pos = [];
+  for (let i = 0; i < n; i++) {
+    const r = Math.floor(i / cols), inRow = r === rows - 1 ? n - r * cols : cols, c = i % cols;
+    const jitter = () => (Math.random() - 0.5) * cell * 0.14;
+    pos.push({ x: (c - (inRow - 1) / 2) * cell + jitter(), y: (r - (rows - 1) / 2) * cell * RATIO + jitter(), r: (Math.random() - 0.5) * 12 });
+  }
+  // Objets : alternés gauche / droite de la grille, répartis en hauteur
+  const gridHalf = Math.max(...pos.map(p => Math.abs(p.x))) + pw / 2;
+  const left = Math.ceil(nObj / 2), right = nObj - left;
+  for (let i = 0; i < nObj; i++) {
+    const side = i % 2 ? 1 : -1, j = Math.floor(i / 2), k = side < 0 ? left : right;
+    const step = Math.min(objW * 1.15, H / k);
+    objs.push({ x: side * (gridHalf + objW * 0.5) + jit(objW * 0.15), y: (j - (k - 1) / 2) * step + jit(step * 0.15), r: jit(14), w: Math.min(objW, step * 0.95) });
+  }
+  return { pw, pos, objs };
+}
+function closeSpread() {
+  if (!spread) return;
+  const old = spread;
+  old.getElement()?.querySelector('.spread')?.classList.remove('in');
+  setTimeout(() => map.removeLayer(old), 350);
+  cityMarkers[spreadCity]?.getElement()?.firstElementChild?.classList.remove('on');
+  content.querySelectorAll('.trip.on').forEach(b => b.classList.remove('on'));
+  spread = null; spreadCity = null;
+}
+function toggleCity(name) {
+  if (spreadCity === name) { closeSpread(); return; }
+  closeSpread();
+  const c = TRIPS.find(t => t.name === name); if (!c) return;
+  spreadCity = name;
+  cityMarkers[name]?.getElement()?.firstElementChild?.classList.add('on');
+  const row = content.querySelector(`.trip[data-city="${CSS.escape(name)}"]`);
+  if (row) { row.classList.add('on'); row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }   // rend visible la ville cliquée sur la carte
+
+  const list = photosOf(c), objects = c.objects || [], notes = c.notes || [];
+  // Objets et post-it se partagent les côtés, en alternance pour bien les mélanger
+  const sides = [];
+  for (let i = 0; i < Math.max(objects.length, notes.length); i++) {
+    if (objects[i]) sides.push({ obj: objects[i] });
+    if (notes[i]) sides.push({ note: notes[i] });
+  }
+  const { pw, pos, objs } = layoutFit(list.length, sides.length);
+  const cards = list.map((p, i) => {
+    const { x, y, r } = pos[i];
+    return `<button class="polaroid" data-i="${i}" style="--pw:${pw}px;--x:${x.toFixed(0)}px;--y:${y.toFixed(0)}px;--r:${r.toFixed(1)}deg;z-index:${list.length - i};transition-delay:${i * 25}ms" aria-label="${esc(p.place)}">
+      <img src="${p.mini}" alt="">${p.priv ? `<i class="lock" title="Photo privée">${LOCK_SVG}</i>` : ''}<span>${esc(p.caption || p.place)}</span></button>`;
+  }).join('') + sides.map((s, i) => {
+    const { x, y, r, w } = objs[i];
+    const style = `--ow:${w.toFixed(0)}px;--x:${x.toFixed(0)}px;--y:${y.toFixed(0)}px;--r:${r.toFixed(1)}deg;transition-delay:${(list.length + i) * 25 + 120}ms`;
+    const it = s.obj || s.note, what = s.obj ? 'cet objet' : 'ce post-it';
+    // Petits boutons au survol : rendre privé / public, supprimer (absents de la version en ligne)
+    const tools = ro() ? '' : `<div class="obj-tools">
+      <button type="button" data-act="priv" data-id="${esc(it.id)}" title="${it.priv ? 'Privé : visible seulement par toi. Cliquer pour le rendre public' : 'Rendre privé'}" aria-label="${it.priv ? 'Rendre public' : 'Rendre privé'} ${what}">${it.priv ? LOCK_SVG : UNLOCK_SVG}</button>
+      <button type="button" data-act="del" data-id="${esc(it.id)}" data-what="${what}" title="Supprimer" aria-label="Supprimer ${what}">${TRASH_SVG}</button></div>`;
+    return s.obj
+      ? `<div class="objet${it.priv ? ' priv' : ''}" style="${style}"><img src="${s.obj.src}" alt="">${tools}</div>`
+      : `<div class="objet postit ${esc(s.note.color || 'jaune')}${it.priv ? ' priv' : ''}" style="${style}"><span>${esc(s.note.text)}</span>${tools}</div>`;
+  }).join('');
+  // Pas d'étiquette au centre (lieu sur les polaroids, dates dans la liste), sauf pour une ville encore vide
+  const title = list.length || sides.length ? '' : `<div class="title">${esc(c.name)} · pas encore de photos</div>`;
+  spread = L.marker([c.lat, c.lon], {
+    icon: L.divIcon({ className: '', html: `<div class="spread">${cards}${title}</div>`, iconSize: [0, 0] }),
+    zIndexOffset: 10000, interactive: false
+  }).addTo(map);
+  const el = spread.getElement();
+  el.querySelectorAll('.objet').forEach(o => { L.DomEvent.disableClickPropagation(o); L.DomEvent.disableScrollPropagation(o); });
+  el.querySelectorAll('.obj-tools button').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    if (b.dataset.act === 'priv') setPrivate(b.dataset.id, !PRIVATE.has(b.dataset.id));
+    else removeElement(b.dataset.id, b.dataset.what);
+  });
+  el.querySelectorAll('.polaroid').forEach(b => {
+    L.DomEvent.disableClickPropagation(b); L.DomEvent.disableScrollPropagation(b);
+    b.onclick = () => openLb(list, +b.dataset.i);
+  });
+  requestAnimationFrame(() => requestAnimationFrame(() => el.querySelector('.spread').classList.add('in')));
+
+  // Recentrer (sans zoomer) si les photos sortent de la zone visible
+  if (list.length || sides.length) {
+    const ex = Math.max(...pos.map(p => Math.abs(p.x) + pw * 0.62), ...objs.map(o => Math.abs(o.x) + o.w * 0.6));
+    const ey = Math.max(...pos.map(p => Math.abs(p.y) + pw * 0.7), ...objs.map(o => Math.abs(o.y) + o.w * 0.6));
+    const size = map.getSize(), [pl, pt] = panelPad(), [pr, pb] = bottomPad();
+    const pt0 = map.latLngToContainerPoint([c.lat, c.lon]);
+    const minX = pl + ex, maxX = size.x - pr - ex, minY = pt + ey, maxY = size.y - pb - ey;
+    const cx = minX <= maxX ? Math.min(Math.max(pt0.x, minX), maxX) : (pl + size.x - pr) / 2;
+    const cy = minY <= maxY ? Math.min(Math.max(pt0.y, minY), maxY) : (pt + size.y - pb) / 2;
+    if (Math.abs(cx - pt0.x) > 2 || Math.abs(cy - pt0.y) > 2) map.panBy([pt0.x - cx, pt0.y - cy], { duration: 0.6 });
+  }
+}
+
+/* ---------- Choix d'une position (recherche ou clic sur la carte) ---------- */
+let pickCb = null, pickMarker = null;
+function startPick(cb) {
+  closeSpread();
+  pickCb = cb;
+  document.getElementById('map').classList.add('picking');
+  document.getElementById('pick-hint').classList.add('on');
+}
+function stopPick() {
+  pickCb = null;
+  document.getElementById('map').classList.remove('picking');
+  document.getElementById('pick-hint').classList.remove('on');
+}
+function showPick(lat, lon) {
+  if (pickMarker) map.removeLayer(pickMarker);
+  pickMarker = L.marker([lat, lon], { icon: L.divIcon({ className: '', html: '<div class="pick-marker"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false }).addTo(map);
+}
+map.on('click', e => {
+  if (pickCb) { const cb = pickCb; stopPick(); cb(e.latlng.lat, e.latlng.lng); return; }
+  closeSpread();
+});
+
+// Bloc « position » réutilisable : recherche OpenStreetMap + clic sur la carte
+function locField(root, onSet) {
+  root.innerHTML = `
+    <div class="loc"><input type="text" placeholder="Chercher (ex : Musée du Louvre, Paris)"><button type="button" class="btn">Chercher</button></div>
+    <div class="results"></div>
+    <div class="row2" style="margin-top:6px"><button type="button" class="btn pick">📍 Placer sur la carte</button></div>
+    <div class="pos">Position non définie</div>`;
+  const input = root.querySelector('input'), results = root.querySelector('.results'), pos = root.querySelector('.pos');
+  const set = (lat, lon, label, country) => {
+    pos.textContent = `✓ ${label || 'Point placé'} (${lat.toFixed(4)}, ${lon.toFixed(4)})`; pos.classList.add('ok');
+    results.innerHTML = ''; showPick(lat, lon); map.panTo([lat, lon]); onSet(lat, lon, country, label);
+  };
+  const search = async () => {
+    const q = input.value.trim(); if (!q) return;
+    results.innerHTML = '<div class="help">Recherche…</div>';
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&accept-language=fr&q=${encodeURIComponent(q)}`);
+      const list = await r.json();
+      if (!list.length) { results.innerHTML = '<div class="help">Aucun résultat — essaie autrement ou place le point sur la carte.</div>'; return; }
+      results.innerHTML = list.map((x, i) => `<button type="button" data-i="${i}">${esc(x.display_name)}</button>`).join('');
+      results.querySelectorAll('button').forEach(b => b.onclick = () => {
+        const x = list[+b.dataset.i];
+        set(+x.lat, +x.lon, x.display_name.split(',')[0], x.address && x.address.country);
+      });
+    } catch (e) { results.innerHTML = '<div class="help">Recherche impossible (pas de connexion ?). Place le point sur la carte.</div>'; }
+  };
+  root.querySelector('.loc button').onclick = search;
+  input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); search(); } };
+  root.querySelector('.pick').onclick = () => startPick((lat, lon) => set(lat, lon));
+}
+
+/* ---------- Lecture de la date EXIF d'une photo ---------- */
+async function exifDate(file) {
+  try {
+    const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+    if (v.getUint16(0) !== 0xFFD8) return null;
+    let o = 2;
+    while (o < v.byteLength - 10) {
+      const marker = v.getUint16(o), len = v.getUint16(o + 2);
+      if (marker === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) {
+        const t = o + 10, le = v.getUint16(t) === 0x4949;
+        const u16 = p => v.getUint16(t + p, le), u32 = p => v.getUint32(t + p, le);
+        const tag = (ifd, id) => { const n = u16(ifd); for (let i = 0; i < n; i++) { const e = ifd + 2 + i * 12; if (u16(e) === id) return e; } return -1; };
+        const ifd0 = u32(4);
+        let e = tag(ifd0, 0x8769), dt = -1;
+        if (e >= 0) dt = tag(u32(e + 8), 0x9003);
+        if (dt < 0) dt = tag(ifd0, 0x0132);
+        if (dt < 0) return null;
+        let s = ''; const off = u32(dt + 8);
+        for (let i = 0; i < 19; i++) s += String.fromCharCode(v.getUint8(t + off + i));
+        const m = s.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2})/);
+        return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}` : null;
+      }
+      if ((marker & 0xFF00) !== 0xFF00) break;
+      o += 2 + len;
+    }
+  } catch (e) {}
+  return null;
+}
+async function resize(file, max, q, type = 'image/jpeg') {
+  const bmp = await createImageBitmap(file);
+  const r = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * r); c.height = Math.round(bmp.height * r);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(res, type, q));
+}
+const localISO = ms => { const d = new Date(ms); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+
+/* ---------- Formulaire d'ajout ---------- */
+let editing = false;
+function openForm() {
+  const selected = spreadCity;            // ville ouverte sur la carte : présélectionnée dans le formulaire
+  closeForm(); closeSpread(); editing = 'add';
+  const opts = TRIPS.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => `<option>${esc(c.name)}</option>`).join('');
+  content.innerHTML = `
+    <form class="form" id="form">
+      <h2>Ajouter des souvenirs</h2>
+      <div class="field">
+        <label for="f-city">Ville</label>
+        <select id="f-city"><option value="">— choisir —</option>${opts}<option value="__new">＋ Nouvelle ville…</option></select>
+        <div class="sub-box" id="f-newcity" hidden>
+          <div class="row2"><input type="text" id="f-cname" placeholder="Nom de la ville"><input type="text" id="f-country" placeholder="Pays"></div>
+          <div id="f-cloc"></div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="lbl">Dates du voyage <span class="help">(facultatif)</span></div>
+        <div class="row2"><input type="date" id="f-start" aria-label="Début"><input type="date" id="f-end" aria-label="Fin"></div>
+      </div>
+      <div class="field">
+        <label for="f-files">Photos <span class="help">(JPEG ou PNG)</span></label>
+        <input type="file" id="f-files" multiple accept="image/jpeg,image/png,image/webp">
+        <div class="previews" id="f-prev"></div>
+        <div class="help">La date de chaque photo est lue automatiquement si elle est présente. Une fois la photo ouverte, tu peux modifier sa légende.</div>
+      </div>
+      <div class="field">
+        <label for="f-objs">Objets <span class="help">(images PNG détourées : billet, carte de transport, magnet…)</span></label>
+        <input type="file" id="f-objs" multiple accept="image/png">
+        <div class="previews objs" id="f-oprev"></div>
+        <div class="help">Ils seront posés à côté des photos quand tu cliques sur la ville.</div>
+      </div>
+      <div class="field">
+        <label for="f-note">Post-it <span class="help">(un court texte, 140 caractères max)</span></label>
+        <textarea id="f-note" rows="2" maxlength="140" placeholder="Ex : Meilleure paella de ma vie !"></textarea>
+        <div class="note-colors" role="radiogroup" aria-label="Couleur du post-it">
+          ${[['jaune', '#fff27a'], ['rose', '#ffb7c9'], ['bleu', '#b6defb'], ['vert', '#c4ecb0']].map(([n, c], i) =>
+            `<label title="${n}"><input type="radio" name="ncolor" value="${n}"${i ? '' : ' checked'}><span style="background:${c}"></span></label>`).join('')}
+        </div>
+      </div>
+      <div class="msg" id="f-msg" hidden></div>
+      <div class="row2">
+        <button type="submit" class="btn primary" id="f-save">Enregistrer</button>
+        <button type="button" class="btn" id="f-cancel">Fermer</button>
+      </div>
+    </form>`;
+
+  const $ = id => document.getElementById(id);
+  let cityLoc = null;
+  locField($('f-cloc'), (lat, lon, country) => { cityLoc = { lat, lon }; if (country && !$('f-country').value) $('f-country').value = country; });
+
+  // Préremplit les dates avec celles de la ville choisie
+  const fillDates = () => {
+    const c = TRIPS.find(t => t.name === $('f-city').value);
+    $('f-start').value = c && c.start || ''; $('f-end').value = c && c.end || '';
+  };
+  $('f-city').onchange = () => { $('f-newcity').hidden = $('f-city').value !== '__new'; fillDates(); };
+  if (selected) { $('f-city').value = selected; fillDates(); }
+  $('f-files').onchange = () => {
+    $('f-prev').innerHTML = [...$('f-files').files].map(f => `<img src="${URL.createObjectURL(f)}" alt="">`).join('');
+  };
+  $('f-objs').onchange = () => {
+    $('f-oprev').innerHTML = [...$('f-objs').files].map(f => `<img src="${URL.createObjectURL(f)}" alt="">`).join('');
+  };
+  $('f-cancel').onclick = closeForm;
+
+  const msg = (t, err) => { $('f-msg').hidden = false; $('f-msg').textContent = t; $('f-msg').classList.toggle('err', !!err); };
+  $('form').onsubmit = async e => {
+    e.preventDefault();
+    const items = [];
+    let city = $('f-city').value;
+    if (!city) return msg('Choisis une ville.', true);
+    if (city === '__new') {
+      city = $('f-cname').value.trim();
+      if (!city) return msg('Donne un nom à la nouvelle ville.', true);
+      if (!cityLoc) return msg('Place la nouvelle ville (recherche ou clic sur la carte).', true);
+      if (TRIPS.some(t => t.name.toLowerCase() === city.toLowerCase())) return msg('Cette ville existe déjà, choisis-la dans la liste.', true);
+      items.push({ type: 'city', id: uid('ville'), name: city, country: $('f-country').value.trim(), ...cityLoc });
+    }
+    const start = $('f-start').value, end = $('f-end').value || start;
+    if (start) {
+      if (end < start) return msg('La date de fin est avant la date de début.', true);
+      items.push({ type: 'dates', id: 'dates-' + city.toLowerCase(), city, start, end });
+    }
+    const files = [...$('f-files').files], objFiles = [...$('f-objs').files];
+    if (objFiles.some(f => f.type !== 'image/png')) return msg('Les objets doivent être des images PNG.', true);
+    const note = $('f-note').value.trim();
+    if (note) items.push({ type: 'note', id: uid('postit'), city, text: note.slice(0, 140), color: $('form').ncolor.value });
+    if (!items.length && !files.length && !objFiles.length) return msg('Rien à enregistrer : ajoute des photos, des objets, un post-it ou des dates.', true);
+    $('f-save').disabled = true;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        msg(`Préparation des photos… ${i + 1}/${files.length}`);
+        const f = files[i];
+        const date = (await exifDate(f)) || localISO(f.lastModified);
+        items.push({ type: 'photo', id: uid('photo'), city, place: '', date, name: f.name, full: await resize(f, 1600, 0.82), mini: await resize(f, 420, 0.75) });
+      }
+      for (let i = 0; i < objFiles.length; i++) {
+        msg(`Préparation des objets… ${i + 1}/${objFiles.length}`);
+        // PNG conservé (transparence), réduit à 700 px max
+        items.push({ type: 'object', id: uid('objet'), city, name: objFiles[i].name, img: await resize(objFiles[i], 700, undefined, 'image/png') });
+      }
+      await store.put(items);
+      ITEMS = await store.all();
+      refresh();
+      const done = [files.length && `${files.length} photo(s)`, objFiles.length && `${objFiles.length} objet(s)`, note && '1 post-it'].filter(Boolean).join(', ');
+      $('f-note').value = '';
+      msg(`Enregistré ✓ ${done ? done + ' ajouté(s).' : ''} Pense à « Sauvegarder mes ajouts » de temps en temps.`);
+      $('f-files').value = ''; $('f-prev').innerHTML = '';
+      $('f-objs').value = ''; $('f-oprev').innerHTML = '';
+      const keep = city; $('f-city').innerHTML = `<option value="">— choisir —</option>${TRIPS.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => `<option>${esc(c.name)}</option>`).join('')}<option value="__new">＋ Nouvelle ville…</option>`;
+      $('f-city').value = keep; $('f-newcity').hidden = true; fillDates();
+      if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+    } catch (err) {
+      msg('Erreur pendant l’enregistrement : ' + err.message, true);
+    } finally { $('f-save').disabled = false; }
+  };
+}
+function closeForm() {
+  editing = false; stopPick();
+  if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+  renderList();
+}
+
+/* ---------- Formulaire « ville à visiter » ---------- */
+function openWishForm() {
+  closeForm(); closeSpread(); editing = 'wish';
+  const kindCard = (k, checked) => `<label class="kind"><input type="radio" name="kind" value="${k}"${checked ? ' checked' : ''}>
+    <span class="cover wish-ico ${k}">${WISH_KINDS[k].svg}</span><span><b>${WISH_KINDS[k].label}</b><br><span class="help">${WISH_KINDS[k].meta}</span></span></label>`;
+  content.innerHTML = `
+    <form class="form" id="wform">
+      <h2>Ville à visiter</h2>
+      <div class="field"><div class="lbl">Type</div><div class="kinds">${kindCard('wish', true)}${kindCard('planned')}</div></div>
+      <div class="field">
+        <label for="w-name">Ville</label>
+        <div class="row2"><input type="text" id="w-name" placeholder="Nom de la ville"><input type="text" id="w-country" placeholder="Pays"></div>
+        <div id="w-loc"></div>
+      </div>
+      <div class="field" id="w-datef" hidden>
+        <label for="w-date">Date prévue <span class="help">(facultatif)</span></label>
+        <input type="date" id="w-date">
+      </div>
+      <div class="msg" id="w-msg" hidden></div>
+      <div class="row2">
+        <button type="submit" class="btn primary">Enregistrer</button>
+        <button type="button" class="btn" id="w-cancel">Fermer</button>
+      </div>
+    </form>`;
+  const $ = id => document.getElementById(id), form = $('wform');
+  let loc = null;
+  locField($('w-loc'), (lat, lon, country, label) => {
+    loc = { lat, lon };
+    if (label && !$('w-name').value) $('w-name').value = label;
+    if (country && !$('w-country').value) $('w-country').value = country;
+  });
+  form.querySelectorAll('input[name=kind]').forEach(r => r.onchange = () => { $('w-datef').hidden = form.kind.value !== 'planned'; });
+  $('w-cancel').onclick = closeForm;
+  const msg = (t, err) => { $('w-msg').hidden = false; $('w-msg').textContent = t; $('w-msg').classList.toggle('err', !!err); };
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const name = $('w-name').value.trim();
+    if (!name) return msg('Donne le nom de la ville.', true);
+    if (!loc) return msg('Place la ville (recherche ou clic sur la carte).', true);
+    const kind = form.kind.value;
+    await store.put([{ type: 'wish', id: uid('envie'), kind, name, country: $('w-country').value.trim(), ...loc, date: kind === 'planned' ? $('w-date').value || null : null }]);
+    ITEMS = await store.all();
+    closeForm(); refresh();
+  };
+}
+
+/* ---------- Sauvegarde de mes ajouts dans ajouts.js ---------- */
+// Contenu du fichier : tous mes ajouts, images en data URL. Les cartes d'amis restent dans le navigateur
+// (garder les fichiers reçus), les réglages internes (dossier de sauvegarde) aussi.
+async function buildBackupJs() {
+  const out = [];
+  for (const it of (await store.all()).filter(i => i.type !== 'friend' && i.type !== 'system')) {
+    const copy = { ...it };
+    if (it.type === 'photo') { copy.full = await blobToDataURL(it.full); copy.mini = await blobToDataURL(it.mini); }
+    if (it.type === 'object') copy.img = await blobToDataURL(it.img);
+    out.push(copy);
+  }
+  return `// Sauvegarde des ajouts faits depuis la carte (${new Date().toLocaleString('fr-FR')}).\n// Placer ce fichier dans le dossier de la carte, à côté de index.html.\nwindow.AJOUTS = ${JSON.stringify(out)};\n`;
+}
+// Navigateurs sans écriture directe (Firefox, Safari) : téléchargement manuel du fichier
+async function exportBackup() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([await buildBackupJs()], { type: 'text/javascript' }));
+  a.download = 'ajouts.js'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// Sauvegarde automatique (Chrome, Edge) : après un accord unique, ajouts.js est réécrit directement
+// dans le dossier de la carte, un instant après chaque modification.
+// Le bouton n'apparaît (en rouge) que s'il reste quelque chose de non sauvegardé dans ajouts.js
+const autoSave = { supported: 'showDirectoryPicker' in window, dir: null, state: 'manual', timer: null, saving: false, again: false, dirty: false };
+const SAVE_STATES = {
+  manual:  { label: 'Non sauvegardé', title: 'Télécharger ajouts.js et le placer dans le dossier de la carte' },
+  off:     { label: 'Activer la sauvegarde', title: 'Choisir une fois le dossier carte-voyages : ensuite tout est sauvegardé automatiquement' },
+  ok:      { label: '', title: '' },
+  pending: { label: 'Non sauvegardé', title: 'Sauvegarde automatique dans un instant (cliquer pour sauvegarder tout de suite)' },
+  paused:  { label: 'Reprendre la sauvegarde', title: 'Le navigateur demande de confirmer l’accès au dossier de la carte' },
+  error:   { label: 'Sauvegarde impossible', title: 'Cliquer pour choisir à nouveau le dossier carte-voyages' }
+};
+function setSaveState(s) {
+  autoSave.state = s;
+  const b = document.getElementById('btn-export'), st = SAVE_STATES[s];
+  b.textContent = st.label; b.title = st.title;
+  b.className = 'btn save-alert';
+  // Masqué quand tout est sauvegardé (et, sans écriture directe, tant que rien n'a changé)
+  b.hidden = s === 'ok' || (s === 'manual' && !autoSave.dirty);
+}
+async function setupAutoSave() {
+  let dir;
+  try { dir = await window.showDirectoryPicker({ id: 'carte-voyages', mode: 'readwrite' }); }
+  catch (e) { return; }                                   // choix annulé
+  try { await dir.getFileHandle('index.html'); }
+  catch (e) { alert('Choisis le dossier « carte-voyages » (celui qui contient index.html).'); return; }
+  autoSave.dir = dir;
+  await store.put([{ type: 'system', id: 'autosave-dir', handle: dir }]);
+  await saveNow();
+}
+async function saveNow() {
+  if (!autoSave.dir) return;
+  if (autoSave.saving) { autoSave.again = true; return; }
+  autoSave.saving = true; setSaveState('pending');
+  try {
+    const fh = await autoSave.dir.getFileHandle('ajouts.js', { create: true });
+    const w = await fh.createWritable();
+    await w.write(await buildBackupJs());
+    await w.close();
+    autoSave.dirty = false;
+    setSaveState(autoSave.again ? 'pending' : 'ok');
+  } catch (e) {
+    setSaveState(e.name === 'NotAllowedError' || e.name === 'SecurityError' ? 'paused' : 'error');
+  } finally {
+    autoSave.saving = false;
+    if (autoSave.again) { autoSave.again = false; saveNow(); }
+  }
+}
+function scheduleAutoSave() {
+  autoSave.dirty = true;
+  if (autoSave.state === 'manual') return setSaveState('manual');   // Firefox / Safari : bouton rouge de téléchargement
+  if (!autoSave.dir || autoSave.state === 'paused') return;   // en pause : tout sera écrit à la reprise
+  setSaveState('pending');
+  clearTimeout(autoSave.timer);
+  autoSave.timer = setTimeout(saveNow, 1200);
+}
+async function resumeAutoSave() {
+  if (!autoSave.dir) return setupAutoSave();
+  if (autoSave.resuming) return;                          // un seul accord demandé à la fois
+  autoSave.resuming = true;
+  try { if (await autoSave.dir.requestPermission({ mode: 'readwrite' }) === 'granted') await saveNow(); } catch (e) {}
+  finally { autoSave.resuming = false; }
+}
+async function initAutoSave() {
+  if (LECTURE || !autoSave.supported) return setSaveState('manual');
+  const rec = (await store.all()).find(i => i.id === 'autosave-dir');
+  if (!rec) return setSaveState('off');
+  autoSave.dir = rec.handle;
+  let p = 'prompt';
+  try { p = await autoSave.dir.queryPermission({ mode: 'readwrite' }); } catch (e) {}
+  if (p === 'granted') return setSaveState('ok');
+  // Accès à reconfirmer (nouvelle session du navigateur) : demandé au premier clic dans la page
+  setSaveState('paused');
+  document.addEventListener('pointerdown', () => { if (autoSave.state === 'paused') resumeAutoSave(); }, { once: true, capture: true });
+}
+document.getElementById('btn-export').onclick = () => {
+  const s = autoSave.state;
+  if (s === 'manual') { exportBackup(); autoSave.dirty = false; setSaveState('manual'); }
+  else if (s === 'off' || s === 'error') setupAutoSave();
+  else if (s === 'paused') resumeAutoSave();
+  else saveNow();
+};
+
+/* ---------- Visionneuse ---------- */
+const lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img'), lbCap = document.getElementById('lb-cap');
+let lbList = [], lbI = 0;
+function openLb(list, i) { lbList = list; lbI = i; drawLb(); lb.classList.add('open'); }
+function drawLb() {
+  const p = lbList[lbI];
+  lbImg.src = p.full;
+  const c = TRIPS.find(t => t.name === p.city);
+  const isCover = c && c.coverPhoto && c.coverPhoto.id === p.id;
+  const sub = [p.general ? '' : esc(p.place), fmtDate(p.date), `${lbI + 1}/${lbList.length}`].filter(Boolean).join(' · ');
+  if (ro()) { lbCap.innerHTML =`<div class="cap-main"><b>${esc(p.caption || p.city)}</b><div class="cap-sub">${sub}</div></div>`; return; }   // version en ligne : pas de modification
+  const star = full => `<svg viewBox="0 0 24 24" width="15" height="15" fill="${full ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+  lbCap.innerHTML = `
+    <div class="cap-main">
+      <label class="cap-title"><input class="cap-edit" type="text" maxlength="120" value="${esc(p.caption || p.city)}" aria-label="Légende de la photo" title="Clique pour modifier la légende">
+        <span class="pen" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></label>
+      <div class="cap-sub"><span>${sub}</span><span class="saved">✓ Légende enregistrée</span></div>
+    </div>
+    <div class="cap-actions">
+      <button class="lb-act cover-btn${isCover ? ' on' : ''}" type="button" title="${isCover ? 'Cette photo représente la ville sur la carte' : 'Utiliser cette photo sur la carte'}">${star(isCover)}${isCover ? 'Couverture' : 'Mettre en couverture'}</button>
+      <button class="lb-act priv-btn${p.priv ? ' on' : ''}" type="button" title="${p.priv ? 'Visible seulement par toi : elle ne sera pas partagée' : 'Ne pas partager cette photo'}">${p.priv ? LOCK_SVG + 'Privée' : UNLOCK_SVG + 'Rendre privée'}</button>
+      <button class="lb-act del-btn" type="button" title="Supprimer cette photo">${TRASH_SVG}Supprimer</button>
+    </div>`;
+  lbCap.querySelector('.priv-btn').onclick = async () => {
+    p.priv = !p.priv;
+    await setPrivate(p.id, p.priv);
+    drawLb();
+  };
+  lbCap.querySelector('.del-btn').onclick = async () => {
+    if (!(await removeElement(p.id, 'cette photo'))) return;
+    lbList.splice(lbI, 1);
+    if (!lbList.length) { closeLb(); return; }
+    lbI = Math.min(lbI, lbList.length - 1); drawLb();
+  };
+  const input = lbCap.querySelector('.cap-edit');
+  input.onkeydown = e => {
+    e.stopPropagation();                                    // pas de navigation ← → pendant la saisie
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { input.value = p.caption || p.city; input.blur(); }
+  };
+  input.onchange = async () => {
+    const v = input.value.trim();
+    const text = v === p.city ? '' : v;                     // vide ou nom de la ville = légende par défaut
+    if (text === (p.caption || '')) { input.value = text || p.city; return; }
+    await store.put([{ type: 'caption', id: 'caption-' + p.id, photo: p.id, text }]);
+    ITEMS = await store.all();
+    p.caption = text; input.value = text || p.city;
+    const open = spreadCity;
+    refresh();
+    if (open) { spreadCity = null; spread && map.removeLayer(spread); spread = null; toggleCity(open); }
+    const ok = lbCap.querySelector('.saved'); ok.classList.add('on'); setTimeout(() => ok.classList.remove('on'), 1500);
+  };
+  lbCap.querySelector('.cover-btn').onclick = async () => {
+    if (isCover) return;
+    await store.put([{ type: 'cover', id: 'cover-' + p.city.toLowerCase(), city: p.city, photo: p.id }]);
+    ITEMS = await store.all();
+    const open = spreadCity;
+    refresh();
+    if (open) { spreadCity = null; spread && map.removeLayer(spread); spread = null; toggleCity(open); }
+    drawLb();
+  };
+}
+const step = d => { lbI = (lbI + d + lbList.length) % lbList.length; drawLb(); };
+lb.querySelector('.prev').onclick = () => step(-1);
+lb.querySelector('.next').onclick = () => step(1);
+lb.querySelector('.close').onclick = () => closeLb();
+lb.onclick = e => { if (e.target === lb || e.target.classList.contains('stage')) closeLb(); };
+// Fermer la visionneuse enregistre d'abord une légende en cours de saisie
+function closeLb() { document.activeElement?.classList.contains('cap-edit') && document.activeElement.blur(); lb.classList.remove('open'); }
+addEventListener('keydown', e => {
+  if (insta.box.classList.contains('open')) { if (e.key === 'Escape') closeInsta(); return; }
+  if (lb.classList.contains('open')) {
+    if (e.key === 'Escape') closeLb();
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  } else if (e.key === 'Escape') { if (pickCb) stopPick(); else closeSpread(); }
+});
+
+document.getElementById('btn-add').onclick = () => editing === 'add' ? closeForm() : openForm();
+document.getElementById('btn-wish').onclick = () => editing === 'wish' ? closeForm() : openWishForm();
+
+let resizeT;
+addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => { map.invalidateSize(); if (!spread) fitAll(); }, 150);
+});
+
+/* ---------- Image Instagram (1080×1080) : photo de fond + cadre avion / bateau / randonnée ----------
+   Tracés repris des maquettes « Cadre photo Insta – voyage ». Nom, coordonnées, date et tracé prennent
+   la couleur d'accent de la palette choisie. */
+const INSTA_FRAMES = {
+  avion: {
+    label: 'Avion', dash: [16, 12],
+    path: 'M -80.0 817.6 L -76.4 815.8 L -72.8 814.2 L -69.1 812.6 L -65.4 811.1 L -61.7 809.6 L -58.0 808.0 L -54.3 806.5 L -50.6 805.0 L -46.9 803.5 L -43.2 801.9 L -39.5 800.4 L -35.8 798.8 L -32.2 797.2 L -28.5 795.6 L -24.9 794.0 L -21.2 792.3 L -17.6 790.6 L -14.0 788.9 L -10.4 787.1 L -6.8 785.3 L -3.3 783.4 L 0.2 781.5 L 3.7 779.5 L 7.1 777.5 L 10.5 775.4 L 13.9 773.2 L 17.2 770.9 L 20.4 768.6 L 23.5 766.1 L 26.5 763.4 L 29.4 760.6 L 32.1 757.7 L 34.7 754.6 L 37.2 751.5 L 39.5 748.3 L 41.8 745.0 L 44.0 741.6 L 46.0 738.2 L 47.9 734.7 L 49.8 731.1 L 51.5 727.5 L 53.1 723.9 L 54.6 720.2 L 56.0 716.4 L 57.4 712.6 L 58.6 708.8 L 59.8 705.0 L 60.8 701.2 L 61.8 697.3 L 62.7 693.4 L 63.6 689.5 L 64.3 685.6 L 65.1 681.6 L 65.7 677.7 L 66.3 673.7 L 66.8 669.7 L 67.3 665.8 L 67.7 661.8 L 68.1 657.8 L 68.4 653.8 L 68.5 649.8 L 68.4 645.8 L 68.3 641.8 L 68.0 637.8 L 67.6 633.9 L 67.2 629.9 L 66.7 625.9 L 66.1 622.0 L 65.5 618.0 L 64.9 614.1 L 64.2 610.1 L 63.4 606.2 L 62.7 602.3 L 61.9 598.3 L 61.1 594.4 L 60.4 590.5 L 59.6 586.6 L 58.8 582.6 L 58.0 578.7 L 57.3 574.8 L 56.6 570.8 L 55.9 566.9 L 55.2 563.0 L 54.6 559.0 L 54.0 555.1 L 53.5 551.1 L 53.1 547.1 L 52.7 543.1 L 52.4 539.1 L 52.1 535.1 L 52.0 531.2 L 52.0 527.2 L 52.0 523.2 L 52.0 519.2 L 52.1 515.2 L 52.2 511.2 L 52.3 507.2 L 52.5 503.2 L 52.7 499.2 L 53.0 495.2 L 53.2 491.2 L 53.5 487.2 L 53.8 483.2 L 54.2 479.2 L 54.6 475.2 L 55.0 471.3 L 55.4 467.3 L 55.9 463.3 L 56.4 459.3 L 56.9 455.4 L 57.4 451.4 L 58.0 447.4 L 58.6 443.5 L 59.1 439.5 L 59.8 435.6 L 60.4 431.6 L 61.0 427.7 L 61.7 423.7 L 62.4 419.8 L 63.1 415.9 L 63.8 411.9 L 64.5 408.0 L 65.2 404.1 L 66.0 400.1 L 66.7 396.2 L 67.5 392.3 L 68.2 388.3 L 68.9 384.4 L 69.6 380.5 L 70.4 376.5 L 71.1 372.6 L 71.8 368.7 L 72.5 364.7 L 73.3 360.8 L 74.0 356.9 L 74.8 352.9 L 75.6 349.0 L 76.4 345.1 L 77.2 341.2 L 78.0 337.3 L 78.8 333.3 L 79.7 329.4 L 80.5 325.5 L 81.4 321.6 L 82.3 317.7 L 83.3 313.9 L 84.2 310.0 L 85.2 306.1 L 86.2 302.2 L 87.3 298.4 L 88.4 294.5 L 89.5 290.7 L 90.7 286.9 L 91.9 283.0 L 93.1 279.2 L 94.4 275.5 L 95.8 271.7 L 97.2 268.0 L 98.7 264.2 L 100.2 260.5 L 101.8 256.9 L 103.4 253.2 L 105.2 249.6 L 107.0 246.1 L 108.8 242.5 L 110.7 239.0 L 112.6 235.4 L 114.5 231.9 L 116.5 228.5 L 118.6 225.0 L 120.6 221.6 L 122.7 218.2 L 124.9 214.8 L 127.1 211.5 L 129.4 208.2 L 134.2 201.2 L 140.9 189.9 L 146.6 178.3 L 151.3 166.4 L 154.9 154.5 L 157.5 142.6 L 159.2 131.0 L 159.8 119.7 L 159.5 109.0 L 158.4 98.9 L 156.6 89.6 L 154.1 81.2 L 151.1 73.8 L 147.8 67.4 L 144.2 62.1 L 140.4 57.9 L 136.6 55.0 L 132.9 53.2 L 129.7 52.5 L 126.8 52.9 L 124.5 54.3 L 122.9 56.7 L 122.1 60.0 L 122.2 64.1 L 123.2 68.9 L 125.3 74.2 L 128.4 79.9 L 132.5 86.0 L 137.9 92.1 L 144.3 98.2 L 151.9 104.1 L 160.5 109.5 L 170.2 114.4 L 180.7 118.6 L 192.0 121.9 L 204.0 124.3 L 216.4 125.5 L 229.2 125.7 L 242.1 124.7 L 255.0 122.5 L 263.3 120.4 L 267.2 119.4 L 271.1 118.4 L 274.9 117.4 L 278.8 116.5 L 282.7 115.6 L 286.6 114.8 L 290.5 113.9 L 294.5 113.1 L 298.4 112.3 L 302.3 111.5 L 306.2 110.8 L 310.2 110.1 L 314.1 109.3 L 318.0 108.6 L 322.0 108.0 L 325.9 107.3 L 329.9 106.6 L 333.8 106.0 L 337.8 105.4 L 341.7 104.7 L 345.7 104.2 L 349.6 103.6 L 353.6 103.1 L 357.6 102.6 L 361.6 102.2 L 365.5 101.8 L 369.5 101.5 L 373.5 101.1 L 377.5 100.8 L 381.5 100.5 L 385.5 100.2 L 389.5 100.0 L 393.5 99.8 L 397.5 99.6 L 401.5 99.4 L 405.5 99.2 L 409.4 99.0 L 413.4 98.9 L 417.4 98.8 L 421.4 98.6 L 425.4 98.5 L 429.4 98.4 L 433.4 98.3 L 437.4 98.2 L 441.4 98.1 L 445.4 98.0 L 449.4 98.0 L 453.4 97.9 L 457.4 97.8 L 461.4 97.7 L 465.4 97.6 L 469.4 97.6 L 473.4 97.5 L 477.4 97.4 L 481.4 97.3 L 485.4 97.2 L 489.4 97.1 L 493.4 97.0 L 497.4 96.9 L 501.4 96.8 L 505.4 96.6 L 509.4 96.5 L 513.4 96.4 L 517.4 96.2 L 521.4 96.0 L 525.4 95.8 L 529.4 95.6 L 533.4 95.4 L 537.4 95.2 L 541.4 94.9 L 545.4 94.7 L 549.4 94.4 L 553.3 94.1 L 557.3 93.9 L 561.3 93.6 L 565.3 93.3 L 569.3 93.0 L 573.3 92.8 L 577.3 92.5 L 581.3 92.2 L 585.3 91.9 L 589.3 91.6 L 593.3 91.3 L 597.2 91.0 L 601.2 90.7 L 605.2 90.4 L 609.2 90.1 L 613.2 89.8 L 617.2 89.5 L 621.2 89.2 L 625.2 88.9 L 629.1 88.6 L 633.1 88.3 L 637.1 88.0 L 641.1 87.7 L 645.1 87.4 L 649.1 87.1 L 653.1 86.8 L 657.1 86.4 L 661.1 86.1 L 665.0 85.8 L 669.0 85.5 L 673.0 85.2 L 677.0 84.8 L 681.0 84.5 L 685.0 84.2 L 689.0 83.9 L 692.9 83.5 L 696.9 83.2 L 700.9 82.9 L 704.9 82.6 L 708.9 82.2 L 712.9 81.9 L 716.9 81.6 L 720.9 81.3 L 733.9 81.0 L 746.8 82.2 L 759.3 85.1 L 771.1 89.3 L 782.0 94.8 L 791.8 101.4 L 800.3 109.0 L 807.3 117.2 L 812.9 125.8 L 816.8 134.5 L 819.2 143.1 L 820.1 151.2 L 819.6 158.7 L 817.7 165.3 L 814.8 170.7 L 811.0 174.9 L 806.5 177.6 L 801.5 178.8 L 796.5 178.5 L 791.6 176.6 L 787.1 173.1 L 783.2 168.2 L 780.3 162.1 L 778.5 154.8 L 777.9 146.6 L 778.8 137.7 L 781.2 128.5 L 785.2 119.1 L 790.8 109.8 L 797.9 100.9 L 806.4 92.7 L 816.2 85.4 L 827.1 79.2 L 838.9 74.3 L 851.4 70.9 L 864.3 68.9 L 868.3 68.6 L 872.3 68.2 L 876.3 67.8 L 880.3 67.5 L 884.2 67.1 L 888.2 66.8 L 892.2 66.4 L 896.2 66.0 L 900.2 65.7 L 904.2 65.3 L 908.1 65.0 L 912.1 64.6 L 916.1 64.2 L 920.1 63.9 L 924.1 63.5 L 928.1 63.2 L 932.0 62.8 L 936.0 62.4 L 940.0 62.1 L 944.0 61.7 L 948.0 61.3 L 952.0 61.0 L 955.9 60.6 L 959.9 60.3 L 963.9 59.9 L 967.9 59.5 L 971.9 59.2 L 975.9 58.8 L 979.9 58.5 L 983.8 58.1 L 983.8 58.1',
+    // Icône : translate(1010 56) rotate(39.9) scale(3) translate(-12 -12)
+    icon: { tx: 1010, ty: 56, rot: 39.9, sx: 3, sy: 3, ox: -12, oy: -12, width: 1.4,
+      paths: ['M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z', 'm21.854 2.147-10.94 10.939'] }
+  },
+  bateau: {
+    label: 'Bateau', dash: [22, 14],
+    path: 'M -80.0 150.0 L -77.2 148.9 L -74.5 147.7 L -71.7 146.5 L -69.0 145.3 L -66.2 144.1 L -63.5 142.9 L -60.7 141.6 L -58.0 140.4 L -55.3 139.1 L -52.6 137.9 L -49.8 136.7 L -47.1 135.4 L -44.4 134.2 L -41.6 132.9 L -38.9 131.7 L -36.1 130.5 L -33.4 129.3 L -30.7 128.0 L -27.9 126.8 L -25.2 125.6 L -22.4 124.4 L -19.7 123.2 L -16.9 122.0 L -14.2 120.8 L -11.4 119.7 L -8.6 118.5 L -5.9 117.3 L -3.1 116.2 L -0.3 115.1 L 2.5 113.9 L 5.2 112.8 L 8.0 111.7 L 10.8 110.6 L 13.6 109.5 L 16.4 108.5 L 19.2 107.4 L 22.1 106.4 L 24.9 105.4 L 27.7 104.4 L 30.5 103.4 L 33.4 102.5 L 36.2 101.5 L 39.1 100.6 L 42.0 99.7 L 44.8 98.9 L 47.7 98.1 L 50.6 97.3 L 53.5 96.5 L 56.4 95.8 L 59.4 95.1 L 62.3 94.5 L 65.2 93.9 L 68.2 93.3 L 71.1 92.7 L 74.1 92.2 L 77.0 91.6 L 80.0 91.1 L 82.9 90.6 L 85.9 90.1 L 88.9 89.7 L 91.8 89.2 L 94.8 88.8 L 97.8 88.4 L 100.7 88.0 L 103.7 87.6 L 106.7 87.3 L 109.7 86.9 L 112.7 86.6 L 115.6 86.4 L 118.6 86.1 L 121.6 85.9 L 124.6 85.7 L 127.6 85.5 L 130.6 85.3 L 133.6 85.2 L 136.6 85.1 L 139.6 85.0 L 142.6 84.9 L 145.6 84.9 L 148.6 84.9 L 151.6 85.0 L 154.6 85.0 L 157.6 85.1 L 160.6 85.2 L 163.6 85.4 L 166.6 85.6 L 169.6 85.8 L 172.6 86.0 L 175.6 86.3 L 178.5 86.6 L 181.5 87.0 L 184.5 87.4 L 187.5 87.8 L 190.4 88.3 L 193.4 88.8 L 196.3 89.3 L 199.3 89.9 L 202.2 90.5 L 205.1 91.2 L 208.0 92.0 L 210.9 92.8 L 213.7 93.8 L 216.6 94.8 L 219.4 95.8 L 222.2 97.0 L 224.9 98.1 L 227.7 99.3 L 230.4 100.6 L 233.1 101.9 L 235.8 103.2 L 238.5 104.6 L 241.1 106.0 L 243.7 107.4 L 246.4 108.9 L 249.0 110.3 L 251.6 111.8 L 254.2 113.3 L 256.8 114.8 L 259.4 116.4 L 262.0 117.9 L 264.5 119.4 L 267.1 120.9 L 269.7 122.5 L 272.3 124.0 L 274.9 125.5 L 277.5 127.0 L 280.1 128.5 L 282.7 130.0 L 285.3 131.5 L 287.9 132.9 L 290.6 134.3 L 293.2 135.7 L 295.9 137.1 L 298.6 138.4 L 301.3 139.7 L 304.0 141.0 L 306.7 142.2 L 309.5 143.4 L 312.3 144.5 L 315.1 145.6 L 317.9 146.6 L 320.8 147.5 L 323.6 148.4 L 326.5 149.2 L 329.4 149.9 L 332.4 150.5 L 335.3 151.1 L 338.3 151.7 L 341.2 152.3 L 344.2 152.8 L 347.1 153.3 L 350.1 153.7 L 353.1 154.2 L 356.0 154.6 L 359.0 154.9 L 362.0 155.3 L 365.0 155.6 L 367.9 155.9 L 370.9 156.2 L 373.9 156.4 L 376.9 156.6 L 379.9 156.8 L 382.9 157.0 L 385.9 157.1 L 388.9 157.2 L 391.9 157.3 L 394.9 157.3 L 397.9 157.4 L 400.9 157.4 L 403.9 157.3 L 406.9 157.3 L 409.9 157.2 L 412.9 157.1 L 415.9 157.0 L 418.9 156.8 L 421.9 156.6 L 424.9 156.4 L 427.9 156.2 L 430.9 155.9 L 433.8 155.6 L 436.8 155.3 L 439.8 155.0 L 442.8 154.6 L 445.8 154.2 L 448.7 153.8 L 451.7 153.4 L 454.7 152.9 L 457.6 152.4 L 460.6 151.9 L 463.5 151.3 L 466.5 150.7 L 469.4 150.1 L 472.3 149.5 L 475.2 148.7 L 478.1 147.9 L 481.0 147.1 L 483.8 146.1 L 486.7 145.1 L 489.5 144.1 L 492.3 143.0 L 495.0 141.8 L 497.8 140.6 L 500.5 139.4 L 503.2 138.1 L 505.9 136.8 L 508.6 135.4 L 511.3 134.1 L 513.9 132.7 L 516.6 131.3 L 519.2 129.8 L 521.9 128.4 L 524.5 126.9 L 527.1 125.5 L 529.7 124.0 L 532.3 122.5 L 534.9 121.0 L 537.5 119.6 L 540.2 118.1 L 542.8 116.6 L 545.4 115.1 L 548.0 113.7 L 550.6 112.2 L 553.3 110.8 L 555.9 109.4 L 558.6 108.0 L 561.2 106.6 L 563.9 105.3 L 566.6 104.0 L 569.3 102.7 L 572.1 101.5 L 574.8 100.3 L 577.6 99.1 L 580.4 98.0 L 583.2 96.9 L 586.0 95.9 L 588.9 95.0 L 591.7 94.1 L 594.6 93.3 L 597.5 92.6 L 600.5 91.9 L 603.4 91.3 L 606.3 90.7 L 609.3 90.2 L 612.3 89.8 L 615.2 89.3 L 618.2 88.9 L 621.2 88.6 L 624.2 88.3 L 627.1 88.0 L 630.1 87.7 L 633.1 87.5 L 636.1 87.4 L 639.1 87.2 L 642.1 87.1 L 645.1 87.0 L 648.1 87.0 L 651.1 87.0 L 654.1 87.0 L 657.1 87.0 L 660.1 87.0 L 663.1 87.1 L 666.1 87.2 L 669.1 87.3 L 672.1 87.4 L 675.1 87.6 L 678.1 87.7 L 681.1 87.9 L 684.1 88.1 L 687.1 88.3 L 690.1 88.5 L 693.1 88.7 L 696.1 88.9 L 699.1 89.1 L 702.1 89.3 L 705.0 89.5 L 708.0 89.8 L 711.0 90.0 L 714.0 90.2 L 717.0 90.4 L 720.0 90.7 L 723.0 90.9 L 726.0 91.1 L 729.0 91.3 L 732.0 91.5 L 735.0 91.7 L 738.0 91.9 L 741.0 92.1 L 743.9 92.2 L 746.9 92.5 L 749.9 92.7 L 752.9 92.9 L 755.9 93.1 L 758.9 93.4 L 761.9 93.6 L 764.9 93.9 L 767.9 94.2 L 770.9 94.4 L 773.8 94.7 L 776.8 95.0 L 779.8 95.3 L 782.8 95.6 L 785.8 95.9 L 788.8 96.2 L 791.8 96.5 L 794.7 96.8 L 797.7 97.2 L 800.7 97.5 L 803.7 97.8 L 806.7 98.2 L 809.6 98.5 L 812.6 98.8 L 815.6 99.2 L 818.6 99.5 L 821.6 99.9 L 824.5 100.2 L 827.5 100.6 L 830.5 100.9 L 833.5 101.3 L 836.5 101.6 L 839.4 102.0 L 842.4 102.3 L 845.4 102.7 L 848.4 103.1 L 851.4 103.4 L 854.3 103.8 L 857.3 104.2 L 860.3 104.5 L 863.3 104.9 L 866.2 105.3 L 869.2 105.7 L 872.2 106.0 L 875.2 106.4 L 878.1 106.8 L 881.1 107.1 L 884.1 107.5 L 887.1 107.9 L 890.1 108.2 L 893.0 108.6 L 896.0 109.0 L 899.0 109.3 L 902.0 109.7 L 905.0 110.0',
+    // Icône : translate(962 128) scale(3) translate(-12 -22)
+    icon: { tx: 962, ty: 128, rot: 0, sx: 3, sy: 3, ox: -12, oy: -22, width: 1.4,
+      paths: ['M10 2v15', 'M7 22a4 4 0 0 1-4-4 1 1 0 0 1 1-1h16a1 1 0 0 1 1 1 4 4 0 0 1-4 4z', 'M9.159 2.46a1 1 0 0 1 1.521-.193l9.977 8.98A1 1 0 0 1 20 13H4a1 1 0 0 1-.824-1.567z'] }
+  },
+  rando: {
+    label: 'Randonnée', dash: [1, 13],
+    path: 'M 1150.0 870.0 L 1147.1 869.2 L 1144.2 868.4 L 1141.3 867.5 L 1138.5 866.7 L 1135.6 865.9 L 1132.7 865.1 L 1129.8 864.3 L 1126.9 863.5 L 1124.0 862.6 L 1121.1 861.8 L 1118.2 861.0 L 1115.4 860.2 L 1112.5 859.4 L 1109.6 858.6 L 1106.7 857.8 L 1103.8 856.9 L 1100.9 856.1 L 1098.0 855.3 L 1095.2 854.5 L 1092.3 853.7 L 1089.4 852.9 L 1086.5 852.0 L 1083.6 851.2 L 1080.7 850.4 L 1077.8 849.6 L 1074.9 848.8 L 1072.1 847.9 L 1069.2 847.1 L 1066.3 846.3 L 1063.4 845.5 L 1060.5 844.6 L 1057.6 843.8 L 1054.8 843.0 L 1051.9 842.2 L 1049.0 841.3 L 1046.1 840.5 L 1043.2 839.7 L 1040.3 838.9 L 1037.5 838.0 L 1034.6 837.2 L 1031.7 836.4 L 1028.8 835.5 L 1025.9 834.7 L 1023.1 833.8 L 1020.2 833.0 L 1017.3 832.2 L 1014.4 831.3 L 1011.5 830.5 L 1008.7 829.6 L 1005.8 828.8 L 1002.9 828.0 L 1000.0 827.3 L 997.0 826.6 L 994.1 825.9 L 991.2 825.2 L 988.3 824.6 L 985.3 824.0 L 982.4 823.4 L 979.5 822.8 L 976.5 822.2 L 973.6 821.6 L 970.6 821.0 L 967.7 820.5 L 964.7 819.9 L 961.8 819.4 L 958.8 818.8 L 955.9 818.3 L 952.9 817.7 L 950.0 817.1 L 947.0 816.6 L 944.1 816.0 L 941.1 815.5 L 938.2 814.9 L 935.3 814.3 L 932.3 813.7 L 929.4 813.1 L 926.5 812.4 L 923.5 811.8 L 920.6 811.1 L 917.7 810.5 L 914.8 809.7 L 911.9 809.0 L 909.0 808.2 L 906.1 807.4 L 903.2 806.5 L 900.4 805.6 L 897.5 804.6 L 894.7 803.5 L 892.0 802.3 L 889.3 800.9 L 886.7 799.4 L 884.3 797.6 L 882.2 795.5 L 880.7 792.9 L 880.0 790.0 L 880.8 787.2 L 882.5 784.7 L 884.5 782.5 L 886.8 780.5 L 889.2 778.7 L 891.6 777.0 L 894.2 775.4 L 896.7 773.9 L 899.3 772.4 L 901.9 770.9 L 904.6 769.5 L 907.2 768.1 L 909.9 766.7 L 912.6 765.4 L 915.3 764.0 L 918.0 762.7 L 920.7 761.4 L 923.4 760.1 L 926.1 758.8 L 928.8 757.6 L 931.5 756.3 L 934.2 755.0 L 937.0 753.8 L 939.7 752.5 L 942.4 751.2 L 945.1 749.9 L 947.8 748.7 L 950.5 747.4 L 953.3 746.1 L 956.0 744.8 L 958.7 743.5 L 961.4 742.2 L 964.1 740.9 L 966.7 739.5 L 969.4 738.2 L 972.1 736.8 L 974.7 735.4 L 977.4 734.0 L 980.0 732.6 L 982.6 731.1 L 985.2 729.6 L 987.8 728.1 L 990.4 726.5 L 992.9 724.9 L 995.4 723.2 L 997.8 721.4 L 1000.2 719.6 L 1002.4 717.6 L 1004.5 715.5 L 1006.5 713.2 L 1008.2 710.8 L 1009.5 708.0 L 1010.0 705.1 L 1009.5 702.1 L 1008.3 699.4 L 1006.5 697.0 L 1004.4 694.8 L 1002.2 692.9 L 999.8 691.0 L 997.4 689.3 L 994.8 687.7 L 992.3 686.1 L 989.6 684.7 L 987.0 683.2 L 984.3 681.9 L 981.7 680.5 L 978.9 679.2 L 976.2 677.9 L 973.5 676.7 L 970.8 675.5 L 968.0 674.3 L 965.3 673.1 L 962.5 671.9 L 959.7 670.7 L 957.0 669.6 L 954.2 668.4 L 951.4 667.3 L 948.6 666.2 L 945.9 665.0 L 943.1 663.9 L 940.3 662.8 L 937.5 661.6 L 934.8 660.5 L 932.0 659.4 L 929.2 658.2 L 926.4 657.0 L 923.7 655.9 L 920.9 654.7 L 918.2 653.5 L 915.4 652.3 L 912.7 651.0 L 910.0 649.7 L 907.3 648.4 L 904.6 647.1 L 901.9 645.7 L 899.3 644.3 L 896.7 642.8 L 894.1 641.3 L 891.6 639.6 L 889.2 637.9 L 886.8 636.0 L 884.6 634.0 L 882.7 631.7 L 881.1 629.2 L 880.2 626.3 L 880.3 623.4 L 881.2 620.6 L 882.9 618.1 L 884.8 615.8 L 887.0 613.8 L 889.4 611.9 L 891.8 610.2 L 894.3 608.5 L 896.9 607.0 L 899.5 605.5 L 902.1 604.0 L 904.8 602.7 L 907.5 601.3 L 910.2 600.0 L 912.9 598.7 L 915.6 597.5 L 918.3 596.2 L 921.1 595.0 L 923.8 593.8 L 926.6 592.6 L 929.4 591.5 L 932.1 590.3 L 934.9 589.2 L 937.7 588.0 L 940.4 586.9 L 943.2 585.7 L 946.0 584.6 L 948.8 583.5 L 951.5 582.3 L 954.3 581.2 L 957.1 580.0 L 959.8 578.9 L 962.6 577.7 L 965.4 576.5 L 968.1 575.3 L 970.9 574.1 L 973.6 572.9 L 976.3 571.6 L 979.1 570.4 L 981.8 569.1 L 984.4 567.7 L 987.1 566.4 L 989.8 564.9 L 992.4 563.5 L 994.9 561.9 L 997.5 560.3 L 999.9 558.6 L 1002.3 556.8 L 1004.6 554.8 L 1006.6 552.6 L 1008.4 550.2 L 1009.6 547.5 L 1009.9 544.5 L 1009.2 541.6 L 1007.8 539.0 L 1006.0 536.6 L 1003.9 534.5 L 1001.5 532.6 L 999.1 530.8 L 996.7 529.1 L 994.1 527.6 L 991.5 526.0 L 988.9 524.6 L 986.2 523.2 L 983.6 521.8 L 980.9 520.5 L 978.2 519.2 L 975.4 517.9 L 972.7 516.7 L 970.0 515.5 L 967.2 514.3 L 964.5 513.1 L 961.7 511.9 L 958.9 510.8 L 956.2 509.6 L 953.4 508.5 L 950.6 507.3 L 947.8 506.2 L 945.1 505.0 L 942.3 503.9 L 939.5 502.8 L 936.8 501.6 L 934.0 500.5 L 931.2 499.3 L 928.4 498.1 L 925.7 497.0 L 922.9 495.8 L 920.2 494.6 L 917.4 493.4 L 914.7 492.1 L 912.0 490.9 L 909.3 489.6 L 906.6 488.2 L 903.9 486.9 L 901.3 485.5 L 898.6 484.0 L 896.0 482.5 L 893.5 481.0 L 891.0 479.3 L 888.6 477.5 L 886.3 475.6 L 884.1 473.5 L 882.3 471.1 L 880.8 468.5 L 880.1 465.6 L 880.4 462.7 L 881.5 459.9 L 883.2 457.5 L 885.3 455.3 L 887.5 453.3 L 889.8 451.4 L 892.3 449.7 L 894.8 448.1 L 897.4 446.5 L 900.0 445.1 L 902.6 443.6 L 905.3 442.2 L 908.0 440.9 L 910.7 439.6 L 913.4 438.3 L 916.1 437.1 L 918.9 435.8 L 921.6 434.6 L 924.4 433.4 L 927.1 432.3 L 929.9 431.1 L 932.7 429.9 L 935.4 428.8 L 938.2 427.6 L 941.0 426.5 L 943.7 425.3 L 946.5 424.2 L 949.3 423.0 L 952.1 421.9 L 954.8 420.7 L 957.6 419.6 L 960.4 418.4 L 963.1 417.2 L 965.9 416.0 L 968.6 414.8 L 971.4 413.6 L 974.1 412.4 L 976.8 411.1 L 979.5 409.8 L 982.2 408.5 L 984.9 407.1 L 987.5 405.7 L 990.2 404.3 L 992.8 402.8 L 995.3 401.2 L 997.8 399.6 L 1000.3 397.8 L 1002.6 396.0 L 1004.8 393.9 L 1006.8 391.7 L 1008.5 389.2 L 1009.6 386.4 L 1010.0 383.5 L 1009.6 380.6 L 1008.5 377.8 L 1006.9 375.2 L 1005.1 372.8 L 1003.1 370.6 L 1000.9 368.6 L 998.6 366.6 L 996.2 364.8 L 993.8 363.0 L 991.4 361.3 L 988.9 359.6 L 986.3 358.0 L 983.8 356.4 L 981.2 354.9 L 978.6 353.4 L 976.0 351.9 L 973.4 350.4 L 970.8 349.0 L 968.1 347.5 L 965.5 346.1 L 962.9 344.7 L 960.2 343.3 L 957.6 341.9 L 954.9 340.5 L 952.3 339.0 L 949.6 337.6 L 947.0 336.2 L 944.3 334.8 L 941.7 333.4 L 939.1 331.9 L 936.4 330.5 L 933.8 329.0 L 931.2 327.5 L 928.6 326.0 L 926.1 324.4 L 923.5 322.9 L 921.0 321.2 L 918.5 319.6 L 916.0 317.8 L 913.6 316.1 L 911.3 314.2 L 909.0 312.2 L 906.8 310.2 L 904.8 308.0 L 902.9 305.7 L 901.3 303.1 L 900.1 300.4 L 899.5 297.4 L 899.5 294.4 L 900.0 291.5 L 901.0 288.7 L 902.3 286.0 L 903.9 283.4 L 905.6 281.0 L 907.5 278.6 L 909.5 276.4 L 911.5 274.2 L 913.6 272.1 L 915.8 270.0 L 918.0 268.0 L 920.3 266.0 L 922.5 264.0 L 924.8 262.1 L 927.1 260.2 L 929.4 258.3 L 931.8 256.3 L 934.1 254.4 L 936.4 252.5 L 938.7 250.6 L 941.0 248.6 L 943.2 246.7 L 945.5 244.7 L 947.7 242.6 L 949.8 240.6 L 951.9 238.4 L 953.9 236.2 L 955.8 233.9 L 957.6 231.4 L 959.1 228.9 L 960.4 226.1 L 961.2 223.3 L 961.4 220.3 L 960.9 217.3 L 959.7 214.6 L 958.1 212.1 L 956.3 209.7 L 954.3 207.4 L 952.1 205.4 L 949.9 203.4 L 947.6 201.5 L 945.2 199.7 L 942.7 197.9 L 940.2 196.3 L 937.7 194.7 L 935.1 193.1 L 932.5 191.6 L 929.9 190.2 L 927.3 188.7 L 924.6 187.4 L 921.9 186.0 L 919.2 184.7 L 916.5 183.4 L 913.8 182.2 L 911.1 180.9 L 908.3 179.7 L 905.6 178.5 L 902.8 177.4 L 900.0 176.2 L 897.2 175.1 L 894.5 174.0 L 891.7 172.9 L 888.9 171.8 L 886.0 170.8 L 883.2 169.7 L 880.4 168.7 L 877.6 167.7 L 874.8 166.7 L 871.9 165.7 L 869.1 164.8 L 866.2 163.8 L 863.4 162.9 L 860.5 161.9 L 857.7 161.0 L 854.8 160.1 L 852.0 159.2 L 849.1 158.3 L 846.2 157.5 L 843.3 156.6 L 840.5 155.8 L 837.6 154.9 L 834.7 154.1 L 831.8 153.3 L 828.9 152.4 L 826.0 151.6 L 823.1 150.9 L 820.3 150.1 L 817.3 149.3 L 814.4 148.6 L 811.5 147.9 L 808.6 147.2 L 805.7 146.6 L 802.7 146.0 L 799.8 145.4 L 796.8 144.8 L 793.9 144.2 L 790.9 143.7 L 788.0 143.1 L 785.0 142.6 L 782.1 142.1 L 779.1 141.6 L 776.2 141.2 L 773.2 140.7 L 770.2 140.3 L 767.3 139.8 L 764.3 139.4 L 761.3 139.0 L 758.4 138.5 L 755.4 138.1 L 752.4 137.8 L 749.4 137.4 L 746.5 137.0 L 743.5 136.6 L 740.5 136.2 L 737.5 135.9 L 734.5 135.5 L 731.6 135.2 L 728.6 134.8 L 725.6 134.5 L 722.6 134.2 L 719.6 133.8 L 716.7 133.5 L 713.7 133.2 L 710.7 132.9 L 707.7 132.6 L 704.7 132.3 L 701.7 132.0 L 698.8 131.7 L 695.8 131.4 L 692.8 131.1 L 689.8 130.8 L 686.8 130.5 L 683.8 130.2 L 680.8 129.9 L 677.8 129.6 L 674.9 129.4 L 671.9 129.1 L 668.9 128.8 L 665.9 128.5 L 662.9 128.3 L 659.9 128.0 L 656.9 127.7 L 653.9 127.4 L 651.0 127.2 L 648.0 126.9 L 645.0 126.6 L 642.0 126.3 L 639.0 126.0 L 636.0 125.8 L 633.0 125.5 L 630.1 125.2 L 627.1 124.8 L 624.1 124.5 L 621.1 124.1',
+    // Icône : translate(578 130) scale(-3.4 3.4) translate(-12 -22)
+    icon: { tx: 578, ty: 130, rot: 0, sx: -3.4, sy: 3.4, ox: -12, oy: -22, width: 1.2, circles: [[14, 3.3, 1.8]],
+      paths: ['M13.3 6.2 11.4 13.2', 'M12.6 6.6 10.2 6.9C9.4 7 9.1 7.5 9.1 8.3V10C9.1 10.6 9.5 10.8 10.1 10.7L11.8 10.4', 'M11.4 13.2 13.8 17.2 15.2 22', 'M11.4 13.2 9.9 17.6 8.4 22', 'M12.9 7.6 14.6 10.8 16.4 10.3', 'M16.3 9.4 18.6 22', 'M12.4 8.6 11.3 11.9 9.6 12.8', 'M9.5 12 5.6 22'] }
+  },
+  voiture: {
+    // Route sinueuse qui entre par la gauche et traverse le haut de l'image, voiture au bout
+    label: 'Voiture', dash: [30, 16],
+    path: 'M -60 360 C 40 340, 70 250, 160 220 S 300 250, 380 215 S 500 120, 600 150 S 700 200, 770 168',
+    icon: { tx: 830, ty: 160, rot: 0, sx: 3, sy: 3, ox: -12, oy: -12, width: 1.4, circles: [[7, 17, 2], [17, 17, 2]],
+      paths: ['M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2', 'M9 17h6'] }
+  },
+  aucun: { label: 'Sans cadre', path: null }   // seulement la photo, le nom, les coordonnées et la date
+};
+const FRAME_ICONS = {   // petites icônes des boutons de choix
+  avion: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>',
+  bateau: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v15"/><path d="M7 22a4 4 0 0 1-4-4 1 1 0 0 1 1-1h16a1 1 0 0 1 1 1 4 4 0 0 1-4 4z"/><path d="M9.159 2.46a1 1 0 0 1 1.521-.193l9.977 8.98A1 1 0 0 1 20 13H4a1 1 0 0 1-.824-1.567z"/></svg>',
+  rando: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="3.3" r="1.8"/><path d="M13.3 6.2 11.4 13.2M11.4 13.2 13.8 17.2 15.2 22M11.4 13.2 9.9 17.6 8.4 22M12.9 7.6 14.6 10.8 16.4 10.3M16.3 9.4 18.6 22"/></svg>',
+  voiture: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>',
+  aucun: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="m4 20 16-16"/></svg>'
+};
+const INSTA_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>';
+
+// 41.3874 / 2.1686 → « 41°23′N · 2°10′E »
+function fmtCoords(lat, lon) {
+  const part = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a), m = Math.round((a - d) * 60); return `${m === 60 ? d + 1 : d}°${String(m === 60 ? 0 : m).padStart(2, '0')}′${v >= 0 ? pos : neg}`; };
+  return `${part(lat, 'N', 'S')} · ${part(lon, 'E', 'W')}`;
+}
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('image')); i.src = src; });
+// Ouverte par double-clic (file://), la page ne peut pas lire les pixels d'une photo du disque :
+// on passe alors par sa copie photos-b64/<id>.js (voir outils/generer_photos_b64.ps1)
+async function photoForCanvas(p) {
+  if (location.protocol !== 'file:' || String(p.full).startsWith('blob:')) return loadImg(p.full);
+  window.PHOTO_B64 = window.PHOTO_B64 || {};
+  if (!PHOTO_B64[p.id]) await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = `photos-b64/${encodeURIComponent(p.id)}.js`;
+    s.onload = res; s.onerror = () => rej(new Error('b64'));
+    document.head.appendChild(s);
+  });
+  return loadImg(PHOTO_B64[p.id]);
+}
+
+// Fond de carte autour de la ville (mêmes tuiles et même teinte que la carte), dessiné à part :
+// si les tuiles ne peuvent pas être lues (pas de connexion…), on garde un fond uni aux couleurs de la palette
+async function drawMapBg(ctx, lat, lon, W) {
+  const root = getComputedStyle(document.documentElement);
+  ctx.fillStyle = root.getPropertyValue('--bg').trim() || '#f4f2ee'; ctx.fillRect(0, 0, W, W);
+  const z = 7, scale = 2, T = 256 * scale, n = 2 ** z;
+  const wx = (lon + 180) / 360 * n * T;
+  const r = lat * Math.PI / 180, wy = (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n * T;
+  const ox = wx - W / 2, oy = wy - W * 0.42;            // ville un peu au-dessus du centre (le texte est en bas)
+  const canvasName = tilesDark ? 'Dark_Gray' : 'Light_Gray';
+  const tmp = document.createElement('canvas'); tmp.width = tmp.height = W;
+  const t = tmp.getContext('2d');
+  const jobs = [];
+  for (const layer of ['Base', 'Reference'])
+    for (let tx = Math.floor(ox / T); tx <= Math.floor((ox + W) / T); tx++)
+      for (let ty = Math.floor(oy / T); ty <= Math.floor((oy + W) / T); ty++) {
+        const src = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${canvasName}_${layer}/MapServer/tile/${z}/${ty}/${((tx % n) + n) % n}`;
+        jobs.push(new Promise(res => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res({ im, tx, ty, layer }); im.onerror = () => res(null); im.src = src; }));
+      }
+  const tiles = (await Promise.all(jobs)).filter(Boolean);
+  if (!tiles.length) return;
+  for (const layer of ['Base', 'Reference'])
+    tiles.filter(x => x.layer === layer).forEach(x => t.drawImage(x.im, x.tx * T - ox, x.ty * T - oy, T, T));
+  try { t.getImageData(0, 0, 1, 1); } catch (e) { return; }   // tuiles illisibles : fond uni
+  const filter = root.getPropertyValue('--map-filter').trim();
+  ctx.save();
+  if (filter && filter !== 'none') ctx.filter = filter;
+  ctx.drawImage(tmp, 0, 0);
+  ctx.restore();
+}
+
+// Polaroïds disposés comme sur la carte : grille lâche, légère inclinaison, ombre, légende manuscrite
+function drawPolaroids(ctx, imgs, photos, area = { x: 70, y: 150, w: 940, h: 640 }) {
+  const n = imgs.length, RATIO = 1.2;
+  let best = { cell: 0, cols: 1, rows: n };
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols), cell = Math.min(area.w / cols, area.h / (rows * RATIO));
+    if (cell > best.cell) best = { cell, cols, rows };
+  }
+  const { cols, rows } = best, cell = Math.min(best.cell, 420), pw = cell * 1.06;
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5;   // aléatoire stable
+  const cx = area.x + area.w / 2, cy = area.y + area.h / 2;
+  imgs.forEach((img, i) => {
+    const r = Math.floor(i / cols), inRow = r === rows - 1 ? n - r * cols : cols, c = i % cols;
+    const x = cx + (c - (inRow - 1) / 2) * cell + rnd() * cell * 0.12;
+    const y = cy + (r - (rows - 1) / 2) * cell * RATIO + rnd() * cell * 0.12;
+    const pad = pw * 0.05, side = pw - pad * 2, h = pad + side + pw * 0.2;
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(rnd() * 0.21);
+    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = pw * 0.08; ctx.shadowOffsetY = pw * 0.025;
+    ctx.fillStyle = '#fffdf8'; ctx.fillRect(-pw / 2, -h / 2, pw, h);
+    ctx.shadowColor = 'transparent';
+    // photo recadrée au carré
+    const s = Math.min(img.width, img.height);
+    ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, -pw / 2 + pad, -h / 2 + pad, side, side);
+    ctx.fillStyle = '#4a4640'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${Math.round(pw * 0.075)}px "Segoe Print", "Bradley Hand", cursive`;
+    let label = photos[i].caption || photos[i].place || '';
+    while (label.length > 3 && ctx.measureText(label).width > side) label = label.slice(0, -2) + '…';
+    ctx.fillText(label, 0, -h / 2 + pad + side + pw * 0.1);
+    ctx.restore();
+  });
+}
+
+// Image d'un objet utilisable dans le canvas (même contrainte file:// que les photos : objets-b64/<id>.js)
+async function objectForCanvas(o) {
+  if (location.protocol !== 'file:' || String(o.src).startsWith('blob:')) return loadImg(o.src);
+  window.OBJET_B64 = window.OBJET_B64 || {};
+  if (!OBJET_B64[o.id]) await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = `objets-b64/${encodeURIComponent(o.id)}.js`;
+    s.onload = res; s.onerror = () => rej(new Error('b64'));
+    document.head.appendChild(s);
+  });
+  return loadImg(OBJET_B64[o.id]);
+}
+
+// Objets et post-it posés en colonnes à gauche et à droite (comme sur la carte), un peu inclinés
+const NOTE_COLORS = { jaune: '#fff27a', rose: '#ffb7c9', bleu: '#b6defb', vert: '#c4ecb0' };
+function drawExtras(ctx, extras) {
+  const left = Math.ceil(extras.length / 2), right = extras.length - left, top = 170, height = 600;
+  let seed = 3;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5;
+  extras.forEach((ex, i) => {
+    const side = i % 2 ? 1 : -1, j = Math.floor(i / 2), k = side < 0 ? left : right;
+    const step = height / k, size = Math.min(230, step * 0.88);
+    const x = side < 0 ? 40 + size / 2 : 1080 - 40 - size / 2, y = top + (j + 0.5) * step + rnd() * step * 0.08;
+    ctx.save();
+    ctx.translate(x + rnd() * 14, y); ctx.rotate(rnd() * 0.3);
+    if (ex.img) {
+      // Objet PNG : sans cadre, ombre qui suit la forme (transparence)
+      const r = Math.min(size / ex.img.width, size / ex.img.height), w = ex.img.width * r, h = ex.img.height * r;
+      ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+      ctx.drawImage(ex.img, -w / 2, -h / 2, w, h);
+    } else {
+      // Post-it : carré de couleur, scotch en haut, texte manuscrit
+      const s = size * 0.92;
+      ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 8;
+      ctx.fillStyle = NOTE_COLORS[ex.note.color] || NOTE_COLORS.jaune; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.save(); ctx.rotate(-0.05); ctx.fillRect(-s * 0.2, -s / 2 - 10, s * 0.4, 20); ctx.restore();
+      const fs = Math.round(s * 0.11);
+      ctx.fillStyle = '#3a3420'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `${fs}px "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive`;
+      // Retour à la ligne automatique (6 lignes max)
+      const words = String(ex.note.text).split(/\s+/), lines = [];
+      let line = '';
+      for (const w of words) {
+        const t = line ? line + ' ' + w : w;
+        if (ctx.measureText(t).width > s * 0.82 && line) { lines.push(line); line = w; } else line = t;
+      }
+      if (line) lines.push(line);
+      const shown = lines.slice(0, 6);
+      if (lines.length > 6) shown[5] = shown[5].replace(/.{0,2}$/, '…');
+      shown.forEach((l, n) => ctx.fillText(l, 0, (n - (shown.length - 1) / 2) * fs * 1.25));
+    }
+    ctx.restore();
+  });
+}
+
+async function drawInsta(canvas, city, photos, frameKey, extras = []) {
+  canvas.width = 1080;                                   // remet aussi à zéro un éventuel canvas « verrouillé »
+  const ctx = canvas.getContext('2d'), W = 1080, f = INSTA_FRAMES[frameKey];
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ffffff';
+  await Promise.all(['800 150px Archivo', '400 22px "DM Mono"', '500 34px "DM Mono"', '20px "Segoe Print"'].map(s => document.fonts.load(s).catch(() => {})));
+  const imgs = await Promise.all(photos.map(photoForCanvas));
+  const extraItems = await Promise.all(extras.map(async x => x.kind === 'obj' ? { img: await objectForCanvas(x.item) } : { note: x.item }));
+  ctx.save();
+  if (imgs.length === 1) {
+    // Une photo : en plein cadre (« cover »)
+    const img = imgs[0];
+    ctx.fillStyle = '#4A4F57'; ctx.fillRect(0, 0, W, W);
+    const s = Math.max(W / img.width, W / img.height), iw = img.width * s, ih = img.height * s;
+    ctx.drawImage(img, (W - iw) / 2, (W - ih) / 2, iw, ih);
+  } else {
+    // Plusieurs photos : la carte autour de la ville, avec les polaroïds posés dessus
+    // (resserrés au centre quand des objets / post-it occupent les côtés)
+    await drawMapBg(ctx, city.lat, city.lon, W);
+    drawPolaroids(ctx, imgs, photos, extraItems.length ? { x: 270, y: 150, w: 540, h: 640 } : undefined);
+  }
+  if (extraItems.length) drawExtras(ctx, extraItems);
+  // Dégradé sombre en bas pour la lisibilité du texte
+  const g = ctx.createLinearGradient(0, W, 0, W - 420);
+  g.addColorStop(0, 'rgba(0,0,0,0.38)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, W - 420, W, 420);
+  // Tracé pointillé + icône (rien pour « Sans cadre »)
+  if (f.path) {
+    ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+    ctx.strokeStyle = ink; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 4.5; ctx.setLineDash(f.dash);
+    ctx.stroke(new Path2D(f.path));
+    ctx.setLineDash([]);
+    const ic = f.icon;
+    ctx.save();
+    ctx.translate(ic.tx, ic.ty); ctx.rotate(ic.rot * Math.PI / 180); ctx.scale(ic.sx, ic.sy); ctx.translate(ic.ox, ic.oy);
+    ctx.lineWidth = ic.width;
+    ic.paths.forEach(d => ctx.stroke(new Path2D(d)));
+    (ic.circles || []).forEach(([cx, cy, r]) => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); });
+    ctx.restore();
+  }
+  // Nom de la ville (réduit s'il est trop long), coordonnées, date du voyage
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  const name = city.name.toUpperCase();
+  let size = 150;
+  ctx.font = `800 ${size}px Archivo`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${-0.01 * size}px`;
+  while (ctx.measureText(name).width > W - 80 && size > 50) { size -= 4; ctx.font = `800 ${size}px Archivo`; }
+  // Nom à la couleur de la palette : ombre noire marquée + fin contour blanc pour le détacher de la photo
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
+  ctx.fillText(name, W / 2, 1000);
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, size * 0.01); ctx.lineJoin = 'round';
+  ctx.strokeText(name, W / 2, 1000);
+  ctx.restore();
+  ctx.font = '400 22px "DM Mono"';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillText(fmtCoords(city.lat, city.lon), W / 2, 1036);
+  if (city.start) {
+    const [y, m] = city.start.split('-');
+    ctx.font = '500 34px "DM Mono"'; ctx.textAlign = 'right';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2.7px';
+    // Date sous le nom de la ville, sur un morceau de scotch blanc (80 % d'opacité, bords dentelés, un peu penché)
+    const label = `${m}/${y.slice(2)}`, tw = ctx.measureText(label).width, px = 18, py = 9, base = 1052;
+    const w = tw + px * 2, h = 34 + py * 2, cx = W - 44 - tw / 2, cy = base - 27 - py + h / 2;
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(-2.5 * Math.PI / 180);
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, -h / 2);
+    for (let i = 1, n = 6; i <= n; i++) ctx.lineTo(w / 2 + (i % 2 ? -5 : 0), -h / 2 + h * i / n);   // bord droit déchiré
+    ctx.lineTo(-w / 2, h / 2);
+    for (let i = 1, n = 6; i <= n; i++) ctx.lineTo(-w / 2 + (i % 2 ? 5 : 0), h / 2 - h * i / n);    // bord gauche déchiré
+    ctx.closePath();
+    ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 1;
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = ink; ctx.textAlign = 'center';
+    ctx.fillText(label, 0, base - cy);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+const INSTA_MAX = 12, INSTA_EXTRA_MAX = 6;
+const insta = { box: document.getElementById('insta'), canvas: document.getElementById('insta-canvas'), city: null, photos: [], extras: [], frame: 'avion', drawing: 0 };
+async function redrawInsta() {
+  const n = ++insta.drawing, err = document.getElementById('insta-err');
+  err.hidden = true;
+  try {
+    // Dessin hors écran, recopié seulement si aucun autre choix n'a été fait entre-temps
+    const off = document.createElement('canvas'); off.height = 1080;
+    await drawInsta(off, insta.city, insta.photos, insta.frame, insta.extras);
+    if (n !== insta.drawing) return;
+    insta.canvas.width = 1080; insta.canvas.getContext('2d').drawImage(off, 0, 0);
+  }
+  catch (e) {
+    if (n !== insta.drawing) return;
+    err.hidden = false;
+    err.textContent = e.message === 'b64'
+      ? 'Photo ou objet introuvable pour l’image : lance outils/generer_photos_b64.ps1 puis recharge la page.'
+      : 'Impossible de préparer l’image avec cette photo.';
+  }
+}
+function openInsta(name) {
+  const c = TRIPS.find(t => t.name === name); if (!c) return;
+  const list = photosOf(c); if (!list.length) return;
+  insta.city = c; insta.photos = [c.coverPhoto ? list.find(p => p.id === c.coverPhoto.id) || list[0] : list[0]];
+  document.getElementById('insta-title').textContent = `Image Instagram · ${c.name}`;
+  document.getElementById('insta-frames').innerHTML = Object.entries(INSTA_FRAMES).map(([k, f]) =>
+    `<button type="button" class="btn${k === insta.frame ? ' on' : ''}" data-f="${k}">${FRAME_ICONS[k]}${f.label}</button>`).join('');
+  insta.extras = [];
+  document.getElementById('insta-thumbs').innerHTML = list.map((p, i) =>
+    `<button type="button" data-i="${i}" class="${insta.photos.includes(p) ? 'on' : ''}" aria-pressed="${insta.photos.includes(p)}" aria-label="${esc(p.caption || p.place)}"><img src="${p.mini}" alt=""><span class="num"></span></button>`).join('');
+  // Objets et post-it de la ville, sélectionnables en plus des photos
+  const extrasAll = [...(c.objects || []).map(o => ({ kind: 'obj', item: o })), ...(c.notes || []).map(n => ({ kind: 'note', item: n }))];
+  const exBox = document.getElementById('insta-extras');
+  exBox.parentElement.hidden = !extrasAll.length;
+  exBox.innerHTML = extrasAll.map((x, i) => x.kind === 'obj'
+    ? `<button type="button" class="ex obj" data-x="${i}" aria-pressed="false" aria-label="Objet"><img src="${x.item.src}" alt=""><span class="num"></span></button>`
+    : `<button type="button" class="ex note" data-x="${i}" aria-pressed="false" aria-label="Post-it : ${esc(x.item.text)}" style="background:${NOTE_COLORS[x.item.color] || NOTE_COLORS.jaune}"><span class="txt">${esc(x.item.text)}</span><span class="num"></span></button>`).join('');
+  const syncThumbs = () => {
+    document.querySelectorAll('#insta-thumbs button').forEach(b => {
+      const k = insta.photos.indexOf(list[+b.dataset.i]);
+      b.classList.toggle('on', k >= 0); b.setAttribute('aria-pressed', String(k >= 0));
+      b.querySelector('.num').textContent = k >= 0 && insta.photos.length > 1 ? k + 1 : '';
+    });
+    exBox.querySelectorAll('button').forEach(b => {
+      const on = insta.extras.includes(extrasAll[+b.dataset.x]);
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+      b.querySelector('.num').textContent = on ? '✓' : '';
+    });
+    const n = insta.extras.length;
+    document.getElementById('insta-count').textContent = (insta.photos.length > 1
+      ? `${insta.photos.length} photos : collage de polaroïds sur la carte` : '1 photo : en plein cadre')
+      + (n ? ` · ${n} objet${n > 1 ? 's' : ''} / post-it` : '');
+  };
+  // Objets / post-it : clic = ajouter ou retirer (6 au plus), posés sur les côtés de l'image
+  exBox.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const x = extrasAll[+b.dataset.x], k = insta.extras.indexOf(x);
+    if (k >= 0) insta.extras.splice(k, 1);
+    else { if (insta.extras.length >= INSTA_EXTRA_MAX) return; insta.extras.push(x); }
+    syncThumbs(); redrawInsta();
+  });
+  document.querySelectorAll('#insta-frames button').forEach(b => b.onclick = () => {
+    insta.frame = b.dataset.f;
+    document.querySelectorAll('#insta-frames button').forEach(x => x.classList.toggle('on', x === b));
+    redrawInsta();
+  });
+  // Clic = ajoute ou retire la photo (au moins une, 12 au plus) ; l'ordre de sélection donne l'ordre du collage
+  document.querySelectorAll('#insta-thumbs button').forEach(b => b.onclick = () => {
+    const p = list[+b.dataset.i], k = insta.photos.indexOf(p);
+    if (k >= 0) { if (insta.photos.length === 1) return; insta.photos.splice(k, 1); }
+    else { if (insta.photos.length >= INSTA_MAX) return; insta.photos.push(p); }
+    syncThumbs(); redrawInsta();
+  });
+  syncThumbs();
+  insta.box.classList.add('open');
+  redrawInsta();
+}
+const closeInsta = () => insta.box.classList.remove('open');
+document.getElementById('insta-close').onclick = closeInsta;
+insta.box.onclick = e => { if (e.target === insta.box) closeInsta(); };
+insta.box.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); closeInsta(); } });
+document.getElementById('insta-dl').onclick = () => {
+  const slug = s => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  try {
+    insta.canvas.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = `instagram-${slug(insta.city.name)}-${insta.frame}.jpg`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }, 'image/jpeg', 0.92);
+  } catch (e) {
+    const err = document.getElementById('insta-err'); err.hidden = false; err.textContent = 'Téléchargement impossible avec cette photo.';
+  }
+};
+
+/* ---------- Amis : partager ma carte (un fichier figé), importer celle d'un ami, la consulter en lecture seule ---------- */
+const FRIEND_FORMAT = 'carte-voyages-ami';
+const blobUrls = new WeakMap();
+const blobUrl = b => { if (!(b instanceof Blob)) return ''; if (!blobUrls.has(b)) blobUrls.set(b, URL.createObjectURL(b)); return blobUrls.get(b); };
+// Instantané importé → même structure que mes voyages (images en Blob, servies par URL objet)
+function friendTrips(f) {
+  return (f.trips || []).map(c => ({
+    name: c.name, country: c.country || '', lat: c.lat, lon: c.lon, start: c.start || null, end: c.end || null, cover: c.cover,
+    places: (c.places || []).map(p => ({ name: p.name || '', general: !!p.general, lat: p.lat, lon: p.lon,
+      photos: (p.photos || []).map(ph => { const u = blobUrl(ph.img); return { id: ph.id, date: ph.date, caption: ph.caption || '', full: u, mini: u }; }) })),
+    objects: (c.objects || []).map(o => ({ id: o.id, src: blobUrl(o.img) })),
+    notes: (c.notes || []).map(n => ({ id: n.id, text: n.text, color: n.color }))
+  }));
+}
+const friendColor = f => (PALETTES[f.settings?.palette] || PALETTES.classique).colors[1];
+const countPhotos = trips => trips.reduce((s, c) => s + (c.places || []).reduce((t, p) => t + (p.photos || []).length, 0), 0);
+
+function friendsHtml() {
+  const rows = FRIENDS.map(f => {
+    const n = (f.trips || []).length, ph = countPhotos(f.trips || []);
+    return `<div class="trip-row"><button class="trip" data-friend="${esc(f.id)}"><span class="cover friend-ava" style="background:${friendColor(f)}">${esc((f.name || '?')[0].toUpperCase())}</span><span><span class="t-name">${esc(f.name)}</span><br><span class="t-meta">${n} ville${n > 1 ? 's' : ''} · ${ph} photo${ph > 1 ? 's' : ''} · carte du ${fmtDate(String(f.exportedAt).slice(0, 10))}</span></span></button>
+      <button class="edit-btn friend-del" data-friend="${esc(f.id)}" title="Retirer de mes amis" aria-label="Retirer ${esc(f.name)} de mes amis">✕</button></div>`;
+  }).join('');
+  return `<div class="group-row"><div class="group">Amis</div>
+      <span class="group-actions"><button type="button" class="btn" id="btn-share" title="Créer un fichier de ta carte à envoyer à tes amis">Partager ma carte</button>
+      <button type="button" class="btn" id="btn-import-friend" title="Ajouter la carte qu’un ami t’a envoyée">＋ Importer</button></span></div>
+    ${rows || '<p class="friends-empty">Importe ici le fichier de carte qu’un ami t’a envoyé pour consulter ses voyages.</p>'}`;
+}
+function bindFriends() {
+  const imp = document.getElementById('btn-import-friend');
+  if (imp) imp.onclick = () => document.getElementById('friend-file').click();
+  const share = document.getElementById('btn-share');
+  if (share) share.onclick = () => openShareForm();
+  content.querySelectorAll('.trip[data-friend]').forEach(b => b.onclick = () => setView(b.dataset.friend));
+  content.querySelectorAll('.friend-del').forEach(b => b.onclick = async () => {
+    const f = FRIENDS.find(x => x.id === b.dataset.friend);
+    if (!confirm(`Retirer la carte de ${f.name} de tes amis ? (Tu pourras la réimporter avec son fichier.)`)) return;
+    await store.del(f.id); ITEMS = await store.all(); refresh();
+  });
+}
+
+// Passer de ma carte à celle d'un ami (id) et inversement (null)
+function setView(id) {
+  closeSpread(); closeInsta(); if (editing) closeForm();
+  VIEW = id;
+  document.body.classList.toggle('friend-view', !!VIEW);
+  document.body.classList.toggle('lecture', ro());
+  refresh(); fitAll();
+  const f = VIEW && FRIENDS.find(x => x.id === VIEW);
+  document.getElementById('friend-banner').hidden = !f;
+  if (f) document.getElementById('friend-banner-txt').textContent = `Carte de ${f.name} · ${fmtDate(String(f.exportedAt).slice(0, 10))}`;
+}
+document.getElementById('btn-back-mine').onclick = () => setView(null);
+
+// Import d'un fichier reçu : remplace l'ancienne carte du même ami s'il en avait déjà envoyé une
+document.getElementById('friend-file').onchange = async e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch (err) { data = null; }
+  if (!data || data.format !== FRIEND_FORMAT || !Array.isArray(data.trips)) { alert('Ce fichier n’est pas une carte de voyages partagée.'); return; }
+  if (data.ownerId && data.ownerId === SETTINGS.ownerId) { alert('C’est ta propre carte : envoie ce fichier à tes amis.'); return; }
+  try {
+    const rec = await toFriendRecord(data);
+    await store.put([rec]);
+    ITEMS = await store.all();
+    setView(rec.id);
+  } catch (err) { alert('Import impossible : ' + err.message); }
+};
+// Fichier de carte partagée → enregistrement « ami » (images converties en Blob)
+async function toFriendRecord(data) {
+  for (const c of data.trips) {
+    for (const p of c.places || []) for (const ph of p.photos || []) ph.img = await dataURLToBlob(ph.img);
+    for (const o of c.objects || []) o.img = await dataURLToBlob(o.img);
+  }
+  return { type: 'friend', id: 'friend-' + (data.ownerId || uid('ami')), ownerId: data.ownerId || null, name: data.ownerName || 'Ami',
+    exportedAt: data.exportedAt || new Date().toISOString(), importedAt: new Date().toISOString(),
+    settings: data.settings || {}, wishes: data.wishes || [], trips: data.trips };
+}
+// Amis fournis avec l'application (amis-par-defaut.js, ex. la carte d'exemple de Camille) : ajoutés au premier
+// lancement seulement, pour qu'une carte retirée de la liste ne revienne pas
+async function importDefaultFriends() {
+  const list = window.AMIS_PAR_DEFAUT;
+  if (LECTURE || !Array.isArray(list) || ITEMS.some(i => i.id === 'amis-par-defaut-ajoutes')) return;
+  const recs = [];
+  for (const data of list) if (data && data.format === FRIEND_FORMAT && Array.isArray(data.trips)) recs.push(await toFriendRecord(data));
+  await store.put([...recs, { type: 'system', id: 'amis-par-defaut-ajoutes' }]);
+  ITEMS = await store.all();
+}
+
+// Formulaire « Partager ma carte » : résumé de ce qui part (les privés jamais) puis création du fichier
+function shareCounts() {
+  let photos = 0, objects = 0, notes = 0, priv = 0;
+  for (const c of TRIPS) {
+    for (const p of c.places) for (const ph of p.photos) PRIVATE.has(ph.id) ? priv++ : photos++;
+    for (const o of c.objects) o.priv ? priv++ : objects++;
+    for (const n of c.notes) n.priv ? priv++ : notes++;
+  }
+  return { cities: TRIPS.length, photos, objects, notes, priv };
+}
+function openShareForm() {
+  closeForm(); closeSpread(); editing = 'share';
+  const k = shareCounts(), pl = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
+  content.innerHTML = `
+    <form class="form" id="sform">
+      <h2>Partager ma carte</h2>
+      <div class="field"><label for="s-name">Ton prénom <span class="help">(affiché chez tes amis)</span></label>
+        <input type="text" id="s-name" maxlength="40" value="${esc(SETTINGS.ownerName || '')}" placeholder="Ex : Nicolas"></div>
+      <div class="share-sum">Seront partagés : <b>${pl(k.cities, 'ville')}</b>, ${pl(k.photos, 'photo')}, ${pl(k.objects, 'objet')}, ${pl(k.notes, 'post-it')}, tes villes à visiter, ton titre et ta palette.<br>
+        ${k.priv ? `🔒 ${pl(k.priv, 'élément privé')} ne ${k.priv > 1 ? 'seront' : 'sera'} pas partagé${k.priv > 1 ? 's' : ''}.` : 'Aucun élément privé.'}</div>
+      <div class="help" style="margin:10px 0 14px">Le fichier est une copie figée de ta carte, photos allégées. Envoie-le par mail : ton ami l’importe dans « Amis » et la consulte en lecture seule. Si tu modifies ta carte, renvoie un nouveau fichier : il remplacera l’ancien chez lui.</div>
+      <div class="msg" id="s-msg" hidden></div>
+      <div class="row2"><button type="submit" class="btn primary" id="s-go">Créer le fichier</button><button type="button" class="btn" id="s-cancel">Fermer</button></div>
+    </form>`;
+  const $ = id => document.getElementById(id);
+  const msg = (t, err) => { $('s-msg').hidden = false; $('s-msg').textContent = t; $('s-msg').classList.toggle('err', !!err); };
+  $('s-cancel').onclick = closeForm;
+  $('sform').onsubmit = async e => {
+    e.preventDefault();
+    const name = $('s-name').value.trim();
+    if (!name) return msg('Indique ton prénom pour que tes amis reconnaissent ta carte.', true);
+    $('s-go').disabled = true;
+    try {
+      if (name !== SETTINGS.ownerName || !SETTINGS.ownerId) await saveSettings({ ownerName: name, ownerId: SETTINGS.ownerId || uid('moi') });
+      const data = await buildShareData(name, (i, n) => msg(`Préparation des images… ${i}/${n}`));
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const slug = s => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const fileName = `carte-${slug(name) || 'voyages'}-${new Date().toISOString().slice(0, 10)}.json`;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      const mo = (blob.size / 1048576).toFixed(1).replace('.', ',');
+      msg(`Fichier « ${fileName} » créé (${mo} Mo). Envoie-le par mail à tes amis.${blob.size > 20 * 1048576 ? ' Il est un peu lourd pour un mail : passe plutôt par WeTransfer ou Google Drive.' : ''}`);
+    } catch (err) { msg('Création impossible : ' + (err.message === 'b64' ? 'lance outils/generer_photos_b64.ps1 puis recharge la page.' : err.message), true); }
+    finally { $('s-go').disabled = false; }
+  };
+}
+async function buildShareData(ownerName, progress) {
+  const toData = (img, max, type, q) => {
+    const r = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL(type, q);
+  };
+  const k = shareCounts(), total = k.photos + k.objects;
+  let done = 0;
+  const trips = [];
+  for (const c of TRIPS) {
+    const places = [];
+    for (const p of c.places) {
+      const photos = [];
+      for (const ph of p.photos) {
+        if (PRIVATE.has(ph.id)) continue;
+        photos.push({ id: ph.id, date: ph.date, caption: CAPTIONS[ph.id] ?? ph.caption ?? '', img: toData(await photoForCanvas(ph), 1000, 'image/jpeg', 0.72) });
+        progress(++done, total);
+      }
+      if (photos.length) places.push({ name: p.name, general: !!p.general, lat: p.lat, lon: p.lon, photos });
+    }
+    const objects = [];
+    for (const o of c.objects) {
+      if (o.priv) continue;
+      objects.push({ id: o.id, img: toData(await objectForCanvas(o), 500, 'image/png') });
+      progress(++done, total);
+    }
+    const notes = c.notes.filter(n => !n.priv).map(n => ({ id: n.id, text: n.text, color: n.color }));
+    trips.push({ name: c.name, country: c.country, lat: c.lat, lon: c.lon, start: c.start, end: c.end,
+      cover: c.coverPhoto && !PRIVATE.has(c.coverPhoto.id) ? c.coverPhoto.id : null, places, objects, notes });
+  }
+  return { format: FRIEND_FORMAT, version: 1, ownerId: SETTINGS.ownerId, ownerName, exportedAt: new Date().toISOString(),
+    settings: { title: SETTINGS.title, palette: SETTINGS.palette },
+    wishes: WISHES.map(({ type, ...w }) => w), trips };
+}
+
+/* ---------- Tutoriel (bouton « ? ») : visite guidée des fonctionnalités, élément par élément ---------- */
+// target : élément mis en lumière (absent ou caché = bulle au centre) ; edit : étape masquée en lecture seule
+const TOUR_STEPS = [
+  { title: 'Bienvenue sur ta carte de voyages', text: 'Ce petit tour te montre comment utiliser la carte. Tu peux le relancer à tout moment avec le bouton <b>?</b>.' },
+  { target: () => document.querySelector('.city-photo, .city-marker'), title: 'Tes villes sur la carte',
+    text: 'Chaque photo posée sur la carte est une ville visitée. <b>Clique dessus</b> : ses photos, objets et post-it s’étalent autour comme des polaroïds.' },
+  { target: () => document.querySelector('.trip-row'), title: 'La liste de tes voyages',
+    text: 'Le menu reprend tes villes, des plus récentes aux plus anciennes. Un clic sur une ville l’ouvre sur la carte.' },
+  { target: () => document.querySelector('.edit-btn[data-city]'), edit: true, title: 'Modifier les dates',
+    text: 'Le <b>✎</b> à droite d’une ville permet de changer ses dates. Sans date, elle passe dans « Aussi visitées ».' },
+  { target: () => document.querySelector('.insta-btn'), title: 'Créer une image Instagram',
+    text: 'Le bouton <b>Instagram</b> génère une image carrée : une photo en plein cadre ou un collage de polaroïds, avec un cadre avion, bateau, randonnée ou voiture, et tes objets et post-it.' },
+  { title: 'Ouvrir une photo', text: 'Clique sur un polaroïd pour le voir en grand. En bas, tu peux <b>modifier sa légende</b>, la <b>mettre en couverture</b> de la ville, la <b>rendre privée</b> (elle ne sera jamais partagée) ou la <b>supprimer</b>. Les flèches ← → passent d’une photo à l’autre.' },
+  { target: () => document.getElementById('btn-add'), edit: true, title: 'Ajouter des souvenirs',
+    text: 'Ajoute une nouvelle ville ou des <b>dates</b>, des <b>photos</b>, des <b>objets</b> (images PNG détourées : billet, magnet…) et des <b>post-it</b>. Si une ville est ouverte, elle est déjà choisie.' },
+  { target: () => document.getElementById('btn-wish'), edit: true, title: 'Les villes à visiter',
+    text: 'Place les villes où tu rêves d’aller (<b>cœur</b>) ou un voyage <b>prévu</b> (avion, avec une date). Elles apparaissent en haut et en bas de la liste.' },
+  { target: () => document.getElementById('site-title'), edit: true, title: 'Ton titre',
+    text: 'Clique sur le titre pour le modifier.' },
+  { target: () => document.getElementById('btn-palette'), title: 'Les couleurs',
+    text: 'Choisis une palette (Classique, Vintage, Océan, Forêt, Lavande, Nuit) : elle change les couleurs du site et teinte la carte.' },
+  { target: () => document.querySelector('.group-row'), edit: true, title: 'Tes amis',
+    text: '<b>Partager ma carte</b> crée un fichier à envoyer par mail (sans tes éléments privés). <b>Importer</b> ajoute la carte qu’un ami t’a envoyée : tu la consultes en lecture seule, avec ses couleurs.' },
+  { target: () => { const b = document.getElementById('btn-export'); return b && !b.hidden ? b : null; }, edit: true, title: 'La sauvegarde',
+    text: 'Tes ajouts sont sauvegardés automatiquement dans le fichier <b>ajouts.js</b> du dossier de la carte (après un accord unique sur Chrome ou Edge). Un bouton <b>rouge</b> n’apparaît que s’il reste quelque chose à sauvegarder.' },
+  { target: () => document.getElementById('btn-collapse'), title: 'Plus de place pour la carte',
+    text: 'Cette languette replie le menu : les photos étalées prennent alors toute la largeur.' },
+  { title: 'C’est parti !', text: 'Bonne exploration de tes souvenirs. Le bouton <b>?</b> en haut du menu relance ce tutoriel quand tu veux.' }
+];
+const tour = { box: document.getElementById('tour'), i: 0, steps: [] };
+function placeTour() {
+  const s = tour.steps[tour.i], spot = tour.box.querySelector('.spot'), bub = tour.box.querySelector('.bubble');
+  const el = s.target && s.target();
+  const visible = el && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+  document.getElementById('tour-step').textContent = `Étape ${tour.i + 1} sur ${tour.steps.length}`;
+  document.getElementById('tour-title').textContent = s.title;
+  document.getElementById('tour-text').innerHTML = `<p>${s.text}</p>`;
+  document.getElementById('tour-dots').innerHTML = tour.steps.map((_, k) => `<i class="${k === tour.i ? 'on' : ''}"></i>`).join('');
+  document.getElementById('tour-prev').disabled = tour.i === 0;
+  document.getElementById('tour-next').textContent = tour.i === tour.steps.length - 1 ? 'Terminer' : 'Suivant';
+  const bw = bub.offsetWidth, bh = bub.offsetHeight, W = innerWidth, H = innerHeight, m = 16;
+  if (!visible) {
+    spot.classList.add('none');
+    bub.style.left = `${(W - bw) / 2}px`; bub.style.top = `${(H - bh) / 2}px`;
+    return;
+  }
+  if (content.contains(el)) el.scrollIntoView({ block: 'nearest' });   // (jamais dans la carte : Leaflet se décalerait)
+  const r = el.getBoundingClientRect(), pad = 6;
+  spot.classList.remove('none');
+  Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
+  // Bulle à droite de l'élément si la place le permet, sinon dessous, sinon dessus
+  let x, y;
+  if (r.right + pad + m + bw < W) { x = r.right + pad + m; y = r.top + r.height / 2 - bh / 2; }
+  else if (r.bottom + pad + m + bh < H) { x = r.left + r.width / 2 - bw / 2; y = r.bottom + pad + m; }
+  else { x = r.left + r.width / 2 - bw / 2; y = r.top - pad - m - bh; }
+  bub.style.left = `${Math.min(Math.max(x, m), W - bw - m)}px`;
+  bub.style.top = `${Math.min(Math.max(y, m), H - bh - m)}px`;
+}
+function openTour() {
+  closeSpread(); closeInsta(); if (editing) closeForm();
+  if (lb.classList.contains('open')) closeLb();
+  const wasCollapsed = collapsed();
+  if (wasCollapsed) setCollapsed(false);                  // le menu doit être visible pour le montrer
+  tour.steps = TOUR_STEPS.filter(s => !(s.edit && ro()));
+  tour.i = 0;
+  tour.box.classList.add('open');
+  setTimeout(placeTour, wasCollapsed ? 400 : 0);
+  document.getElementById('tour-next').focus();
+}
+const closeTour = () => tour.box.classList.remove('open');
+const tourGo = d => { const n = tour.i + d; if (n < 0) return; if (n >= tour.steps.length) return closeTour(); tour.i = n; placeTour(); };
+document.getElementById('btn-help').onclick = openTour;
+document.getElementById('tour-next').onclick = () => tourGo(1);
+document.getElementById('tour-prev').onclick = () => tourGo(-1);
+document.getElementById('tour-skip').onclick = closeTour;
+tour.box.addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Escape') closeTour();
+  if (e.key === 'ArrowRight') tourGo(1);
+  if (e.key === 'ArrowLeft') tourGo(-1);
+});
+addEventListener('resize', () => { if (tour.box.classList.contains('open')) placeTour(); });
+
+// Animation d'ouverture : on retire les classes une fois la carte dépliée (Leaflet recalcule alors sa taille)
+const INTRO_END = performance.now() + 1900;
+let introMarkers = true;
+const popClass = () => introMarkers ? ' intro-pop' : '';
+// Les marqueurs se posent un par un, juste après le dépliage
+const popDelay = i => introMarkers ? (Math.max(0, INTRO_END - 500 - performance.now()) / 1000 + i * 0.07).toFixed(2) : 0;
+setTimeout(() => {
+  document.querySelectorAll('#map.intro, #folds.intro, #panel.intro').forEach(e => e.classList.remove('intro'));
+  map.invalidateSize();
+}, 2100);
+
+// Menu replié lors de la dernière visite ?
+let wasCollapsed = false;
+try { wasCollapsed = localStorage.getItem('carte-menu-replie') === '1'; } catch (e) {}
+setCollapsed(wasCollapsed);
+
+(async () => {
+  await store.open();
+  ITEMS = await store.all();
+  await importBackup();
+  await importDefaultFriends();
+  refresh();
+  introMarkers = false;
+  fitAll();
+  // À partir d'ici, chaque modification déclenche la sauvegarde automatique (si activée)
+  store.onChange = scheduleAutoSave;
+  initAutoSave();
+  // Carte encore vide (nouvel utilisateur) : le tutoriel se lance une fois, après l'animation d'ouverture
+  let tutoSeen = true;
+  try { tutoSeen = !!localStorage.getItem('carte-tuto-vu'); localStorage.setItem('carte-tuto-vu', '1'); } catch (e) {}
+  if (!LECTURE && !TRIPS.length && !tutoSeen) setTimeout(openTour, 2300);
+})();
+</script>
+</body>
+</html>

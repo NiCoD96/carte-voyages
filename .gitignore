@@ -1,0 +1,8 @@
+# Donnees personnelles : ne pas publier
+ajouts.js
+photos/
+mini/
+objets/
+photos-b64/
+objets-b64/
+carte-*.json
